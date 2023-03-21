@@ -1,0 +1,53 @@
+# Default values for cbi-oi-kubecost-exporter.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: docker.io/mirrr/cbi-oi-kubecost-exporter
+  pullPolicy: IfNotPresent
+  tag: "1.0.4"
+
+imagePullSecrets: []
+
+persistentVolume:
+  size: 1Gi
+  enabled: true
+
+# -- setting up a cronJob scheduler to run an export task at the right time
+cronSchedule: "0 */6 * * *" # every 6 hours
+
+flexera:
+  # -- refresh Token from FlexeraOne
+  refreshToken: ""
+  # -- flexera Organization ID
+  orgId: ""
+  # -- Bill Connect ID
+  billConnectId: ""
+  # -- file upload timeout in seconds
+  uploadTimeout: 600
+  # -- Shard ("NAM", "EU")
+  shard: "NAM"
+  # -- CSV file ManufacturerName
+  vendorName: "Google"
+
+kubecost:
+  # -- default kubecost-cost-analyzer service host on the current cluster. For current cluster is <serviceName>.<namespaceName>.svc.cluster.local
+  host: "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"
+  # -- Aggregation Level ("namespace", "controller", "pod")
+  aggregation: "controller"
+  # -- Comma-separated list of namespaces to share costs
+  shareNamespaces: "kube-system,cadvisor"
+  # -- Include cost of idle resources
+  idle: true
+  # -- Allocate idle cost proportionally
+  shareIdle: false
+  # -- Share the cost of cluster overhead assets such as cluster management costs
+  shareTenancyCosts: true
+  # -- cost multiplier
+  multiplier: 1.0
+
+# delete files generated for the previous month
+fileRotation: true
+
+# Filepath to mount persistent volume
+filePath: "/var/kubecost"

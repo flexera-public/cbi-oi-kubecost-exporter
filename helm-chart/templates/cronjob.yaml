@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "cbi-oi-kubecost-exporter.fullname" . }}
+  labels:
+    {{- include "cbi-oi-kubecost-exporter.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronSchedule }}
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 100
+      template:
+        spec:
+          containers:
+          - name: {{ .Chart.Name }}
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- with .Values.imagePullSecrets }}
+            imagePullSecrets:
+              {{- toYaml . | nindent 8 }}
+            {{- end }}
+            env:
+              - name: REFRESH_TOKEN
+                value: "{{ .Values.flexera.refreshToken }}"
+              - name: ORG_ID
+                value: "{{ .Values.flexera.orgId }}"
+              - name: BILL_CONNECT_ID
+                value: "{{ .Values.flexera.billConnectId }}"
+              - name: UPLOAD_TIMEOUT
+                value: "{{ .Values.flexera.uploadTimeout }}"
+              - name: SHARD
+                value: "{{ .Values.flexera.shard }}"
+              - name: VENDOR_NAME
+                value: "{{ .Values.flexera.vendorName }}"
+              - name: KUBECOST_HOST
+                value: "{{ .Values.kubecost.host }}"
+              - name: AGGREGATION
+                value: "{{ .Values.kubecost.aggregation }}"
+              - name: SHARE_NAMESPACES
+                value: "{{ .Values.kubecost.shareNamespaces }}"
+              - name: IDLE
+                value: "{{ .Values.kubecost.idle }}"
+              - name: SHARE_IDLE
+                value: "{{ .Values.kubecost.shareIdle }}"
+              - name: SHARE_TENANCY_COSTS
+                value: "{{ .Values.kubecost.shareTenancyCosts }}"
+              - name: MULTIPLIER
+                value: "{{ .Values.kubecost.multiplier }}"
+              - name: FILE_ROTATION
+                value: "{{ .Values.fileRotation }}"
+              - name: FILE_PATH
+                value: "{{ .Values.filePath }}"
+            volumeMounts:
+              - name: persistent-configs
+                mountPath: {{ .Values.filePath }}
+          restartPolicy: "Never"
+          volumes:
+            - name: persistent-configs
+            {{- if .Values.persistentVolume }}
+              {{- if .Values.persistentVolume.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ template "cbi-oi-kubecost-exporter.fullname" . }}
+              {{- else }}
+              emptyDir: {}
+              {{- end -}}
+            {{- else }}
+              persistentVolumeClaim:
+                claimName: {{ template "cbi-oi-kubecost-exporter.fullname" . }}
+            {{- end }}

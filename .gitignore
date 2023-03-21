@@ -1,0 +1,33 @@
+bin/
+.DS_Store
+._*
+/keys/*
+/logs/*
+*.log
+*.fasthttp.gz
+local-values.yaml
+
+# editors' configs
+.certs
+.project
+.idea/
+*.tmproj
+.vscode/
+
+# Databases
+*.db
+*.db-journal
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+*.exe
+
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
