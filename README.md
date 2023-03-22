@@ -9,8 +9,8 @@ There are two different approaches for passing custom Helm config values into th
 1. Pass exact parameters via --set command-line flags:
 
 ```
-helm install kubecost-exporter kubecost-exporter \
-    --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/helm-chart/ \
+helm install kubecost-exporter helm-chart \
+    --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
     --namespace kubecost-exporter --create-namespace \
     --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
 	--set flexera.orgId="1105" \
@@ -21,8 +21,8 @@ helm install kubecost-exporter kubecost-exporter \
 2. Pass exact parameters via custom values.yaml file:
 
 ```
-helm install kubecost-exporter kubecost-exporter \
-    --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/helm-chart/ \
+helm install kubecost-exporter helm-chart \
+    --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
     --namespace kubecost-exporter --create-namespace \
     --values values.yaml
 ```
