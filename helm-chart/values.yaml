@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: docker.io/mirrr/cbi-oi-kubecost-exporter
-  pullPolicy: IfNotPresent
-  tag: "1.0.4"
+  repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
+  pullPolicy: Always
+  tag: "latest"
 
 imagePullSecrets: []
 
