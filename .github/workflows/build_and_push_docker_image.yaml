@@ -23,6 +23,10 @@ jobs:
           role-to-assume: arn:aws:iam::479353902725:role/gha-flexera-public-cbi-oi-kubecost-exporter-push
           aws-region: us-east-1
 
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
