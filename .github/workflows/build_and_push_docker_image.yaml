@@ -20,7 +20,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::479353902725:role/gha-flexera-public-cbi-oi-kubecost-push
+          role-to-assume: arn:aws:iam::479353902725:role/gha-flexera-public-cbi-oi-kubecost-exporter-push
           aws-region: us-east-1
 
       - name: Set up Docker Buildx
@@ -34,14 +34,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: public.ecr.aws/flexera/cbi-oi-kubecost-exporter:${{ github.sha }}
-
-      - name: Update Helm chart
-        run: |
-          sed -i "s|repository:.*|repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter|" helm-chart/values.yaml
-          sed -i "s|tag:.*|tag: ${{ github.sha }}|" helm-chart/values.yaml
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "github-actions@users.noreply.github.com"
-          git add helm-chart/values.yaml
-          git commit -m "Update Helm chart with new image tag [skip ci]"
-          git push
+          tags: public.ecr.aws/flexera/cbi-oi-kubecost-exporter:latest
