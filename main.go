@@ -317,7 +317,6 @@ func (e *App) uploadToFlexera() {
 }
 
 func (a *App) doPost(url, data string, headers map[string]string, uploadTimeout ...time.Duration) *http.Response {
-	log.Printf("---> %+v\n", url)
 	client := a.client
 	if len(uploadTimeout) > 0 {
 		client = &http.Client{
@@ -331,7 +330,6 @@ func (a *App) doPost(url, data string, headers map[string]string, uploadTimeout 
 	}
 
 	response, _ := client.Do(request)
-	log.Printf("<--- %+v\n", response.StatusCode)
 	return response
 }
 
@@ -341,8 +339,6 @@ func (a *App) generateAccessToken() (string, error) {
 	reqBody := url.Values{}
 	reqBody.Set("grant_type", "refresh_token")
 	reqBody.Set("refresh_token", a.RefreshToken)
-
-	log.Printf("---> %+v\n", a.RefreshToken)
 
 	req, err := http.NewRequest("POST", accessTokenUrl, strings.NewReader(reqBody.Encode()))
 	if err != nil {
@@ -355,8 +351,6 @@ func (a *App) generateAccessToken() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error retrieving access token: %v", err)
 	}
-
-	log.Printf("---> %+v\n", resp)
 
 	defer resp.Body.Close()
 
@@ -376,8 +370,6 @@ func (a *App) generateAccessToken() (string, error) {
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
 		return "", fmt.Errorf("error parsing access token response body: %v", err)
 	}
-
-	log.Printf("%+v\n", tokenResp.AccessToken)
 
 	return tokenResp.AccessToken, nil
 }
@@ -443,9 +435,6 @@ func newApp() *App {
 	if err := env.Parse(&a.Config); err != nil {
 		log.Fatal(err)
 	}
-
-	log.Printf("APP >>>> %+v\n\n", a)
-	log.Printf("Config >>>> %+v\n\n", a.Config)
 
 	a.Aggregation = strings.ToLower(a.Aggregation)
 	a.resourceType = a.Aggregation

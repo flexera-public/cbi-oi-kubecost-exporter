@@ -1,8 +1,43 @@
-# cbi-oi-kubecost-exporter
+# Kubecost exporter for Flexera CCO
 
-Kubecost exporter for Flexera CCO
+Kubecost Flexera Exporter is a command line tool used to automate the transfer of Kubernetes cluster spending data from Kubecost to Flexera One for further processing and analysis. It generates a CSV file for each day of the current month containing Kubernetes cluster usage data in a format compatible with the Flexera One platform and then uploads it. The app is designed to be run as a scheduled task, preferably on a Kubernetes cluster.
 
 ## Installation
+
+The application can be installed from golang sources, from a docker image or via the helm package manager.
+
+### Go sources
+
+This app requires Go version 1.16 or higher. To install, run:
+
+```bash
+	go install github.com/flexera-public/cbi-oi-kubecost-exporter
+```
+
+The app is configured using environment variables defined in a .env file. The following configuration options are available:
+
+-   `KUBECOST_HOST` - the hostname of the Kubecost instance
+-   `BILL_CONNECT_ID` - the ID of the bill connect to which to upload the data
+-   `SHARD` - the region of your Flexera One account. Valid values are NAM or EU.
+-   `ORG_ID` - the ID of your Flexera One organization.
+-   `REFRESH_TOKEN` - the refresh token used to obtain an access token for the Flexera One API
+-   `AGGREGATION` - the level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod.
+-   `SHARE_IDLE` - a flag indicating whether to share idle costs among namespaces
+-   `SHARE_NAMESPACES` - a flag indicating whether to share namespace costs among clusters
+-   `SHARE_TENANCY_COSTS` - a flag indicating whether to share tenancy costs among clusters
+-   `MULTIPLIER` - a multiplier to apply to the cost data
+-   `IDLE` - whether to include idle resources in the usage data. valid values are true or false.
+-   `FILE_PATH` - the path where the CSV files are stored
+-   `UPLOAD_TIMEOUT` - the timeout for uploading the CSV files to Flexera One, in seconds.
+-   `VENDOR_NAME` - the name of the vendor
+
+To use this app, run:
+
+```bash
+flexera-kubecost-exporter
+```
+
+### Helm package manager
 
 There are two different approaches for passing custom Helm config values into the kubecost-exporter:
 
@@ -54,3 +89,7 @@ helm install kubecost-exporter helm-chart \
 | kubecost.shareTenancyCosts | bool | `true` | Share the cost of cluster overhead assets such as cluster management costs |
 | persistentVolume.enabled | bool | `true` |  |
 | persistentVolume.size | string | `"1Gi"` |  |
+
+## License
+
+This tool is licensed under the MIT license. See the LICENSE file for more details.
