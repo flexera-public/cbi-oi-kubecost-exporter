@@ -29,7 +29,6 @@ The app is configured using environment variables defined in a .env file. The fo
 -   `IDLE` - whether to include idle resources in the usage data. valid values are true or false.
 -   `FILE_PATH` - the path where the CSV files are stored
 -   `UPLOAD_TIMEOUT` - the timeout for uploading the CSV files to Flexera One, in seconds.
--   `VENDOR_NAME` - the name of the vendor
 
 To use this app, run:
 
@@ -75,7 +74,6 @@ helm install kubecost-exporter helm-chart \
 | flexera.refreshToken | string | `""` | refresh Token from FlexeraOne |
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU") |
 | flexera.uploadTimeout | int | `600` | file upload timeout in seconds |
-| flexera.vendorName | string | `"Google"` | CSV file ManufacturerName |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"docker.io/mirrr/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.0.0"` |  |

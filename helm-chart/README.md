@@ -38,7 +38,6 @@ helm install kubecost-exporter helm-chart \
 | flexera.refreshToken | string | `""` | refresh Token from FlexeraOne |
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU") |
 | flexera.uploadTimeout | int | `600` | file upload timeout in seconds |
-| flexera.vendorName | string | `"Google"` | CSV file ManufacturerName |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.repository | string | `"docker.io/mirrr/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.0.0"` |  |

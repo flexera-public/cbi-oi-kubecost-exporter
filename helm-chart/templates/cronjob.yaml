@@ -31,8 +31,6 @@ spec:
                 value: "{{ .Values.flexera.uploadTimeout }}"
               - name: SHARD
                 value: "{{ .Values.flexera.shard }}"
-              - name: VENDOR_NAME
-                value: "{{ .Values.flexera.vendorName }}"
               - name: KUBECOST_HOST
                 value: "{{ .Values.kubecost.host }}"
               - name: AGGREGATION
