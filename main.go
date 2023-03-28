@@ -107,9 +107,8 @@ type (
 		BillConnectID     string  `env:"BILL_CONNECT_ID"`
 		UploadTimeout     int64   `env:"UPLOAD_TIMEOUT" envDefault:"600"`
 		Shard             string  `env:"SHARD" envDefault:"NAM"`
-		VendorName        string  `env:"VENDOR_NAME" envDefault:"Google"`
 		KubecostHost      string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		Aggregation       string  `env:"AGGREGATION" envDefault:"controller"`
+		Aggregation       string  `env:"AGGREGATION" envDefault:"namespace"`
 		ShareNamespaces   string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
 		Idle              bool    `env:"IDLE" envDefault:"true"`
 		ShareIdle         bool    `env:"SHARE_IDLE" envDefault:"false"`
@@ -121,7 +120,7 @@ type (
 
 	App struct {
 		Config
-		resourceType     string
+		aggregation      string
 		filesToUpload    map[string]struct{}
 		client           *http.Client
 		invoiceYearMonth string
@@ -162,7 +161,7 @@ func (e *App) updateFromKubecost() {
 		}
 		q := req.URL.Query()
 		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
-		q.Add("aggregate", e.Aggregation)
+		q.Add("aggregate", e.aggregation)
 		q.Add("idle", fmt.Sprintf("%t", e.Idle))
 		q.Add("shareIdle", fmt.Sprintf("%t", e.ShareIdle))
 		q.Add("shareNamespaces", e.ShareNamespaces)
@@ -187,57 +186,64 @@ func (e *App) updateFromKubecost() {
 		writer := csv.NewWriter(b)
 
 		writer.Write([]string{
-			"CloudVendorAccountID",
-			"CloudVendorAccountName",
-			"Category",
-			"LineItemType",
-			"ResourceGroup",
-			"ResourceType",
 			"ResourceID",
-			"Service",
-			"UsageType",
-			"Tags",
-			"UsageAmount",
-			"UsageUnit",
 			"Cost",
 			"CurrencyCode",
-			"UsageStartTime",
+			"Aggregation",
+			"UsageType",
+			"UsageAmount",
+			"UsageUnit",
+			"Cluster",
+			"Container",
+			"Namespace",
+			"Pod",
+			"Node",
+			"Controller",
+			"ControllerKind",
+			"ProviderID",
+			"Labels",
 			"InvoiceYearMonth",
-			"ManufacturerName",
+			"InvoiceDate",
+			"StartTime",
+			"EndTime",
 		})
 
 		for _, allocation := range data {
 			for id, v := range allocation {
-				tagsJSON, _ := json.Marshal(v.Properties.Labels)
-				tags := string(tagsJSON)
-				types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "loadBalancerCost"}
-				vals := []float64{v.CPUCost, v.GPUCost, v.RAMCost, v.PVCost, v.NetworkCost, v.SharedCost, v.LoadBalancerCost}
-				units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes"}
-				amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes}
+				labelsJSON, _ := json.Marshal(v.Properties.Labels)
+				labels := string(labelsJSON)
+				types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
+				vals := []float64{v.CPUCost, v.GPUCost, v.RAMCost, v.PVCost, v.NetworkCost, v.SharedCost, v.ExternalCost, v.LoadBalancerCost}
+				units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
+				amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
 
 				for i, c := range types {
 					multiplierFloat := e.Multiplier * vals[i]
 					if v.Properties.Cluster == "" {
 						v.Properties.Cluster = "Cluster"
 					}
+
 					writer.Write([]string{
-						v.Properties.Cluster,
-						"kubernetes",
-						"Compute",
-						"Usage",
-						strings.Split(id, "/")[0],
-						e.resourceType,
 						id,
-						"Kubernetes",
-						c,
-						tags,
-						strconv.FormatFloat(amounts[i], 'f', 2, 64),
-						units[i],
 						strconv.FormatFloat(multiplierFloat, 'f', 2, 64),
 						curr,
-						d.Format("2006-01-02T15:04:05Z"),
+						e.Aggregation,
+						c,
+						strconv.FormatFloat(amounts[i], 'f', 2, 64),
+						units[i],
+						v.Properties.Cluster,
+						v.Properties.Container,
+						v.Properties.Namespace,
+						v.Properties.Pod,
+						v.Properties.Node,
+						v.Properties.Controller,
+						v.Properties.ControllerKind,
+						v.Properties.ProviderID,
+						labels,
 						e.invoiceYearMonth,
-						e.VendorName,
+						v.Window.Start,
+						v.Start,
+						v.End,
 					})
 				}
 			}
@@ -376,6 +382,7 @@ func (a *App) generateAccessToken() (string, error) {
 
 // update file list and remove old files
 func (a *App) updateFileList() {
+	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	now := time.Now().Local()
 	files, err := ioutil.ReadDir(a.FilePath)
 	if err != nil {
@@ -385,9 +392,9 @@ func (a *App) updateFileList() {
 	for _, file := range files {
 		if file.Mode().IsRegular() {
 			if t, err := time.Parse("kubecost-2006-01-02.csv", file.Name()); err == nil {
-				if t.Month() == now.Month() {
+				if t.Month() == lastInvoiceDate.Month() {
 					a.filesToUpload[path.Join(a.FilePath, file.Name())] = struct{}{}
-				} else if a.FileRotation {
+				} else if a.FileRotation && t.Month() != now.Month() {
 					if err = os.Remove(path.Join(a.FilePath, file.Name())); err != nil {
 						log.Printf("error removing file %s: %v", file.Name(), err)
 					}
@@ -437,13 +444,12 @@ func newApp() *App {
 	}
 
 	a.Aggregation = strings.ToLower(a.Aggregation)
-	a.resourceType = a.Aggregation
 
 	switch a.Aggregation {
 	case "namespace":
-		a.Aggregation = "cluster," + a.Aggregation
+		a.aggregation = "cluster," + a.Aggregation
 	case "controller", "pod":
-		a.Aggregation = "cluster,namespace," + a.Aggregation
+		a.aggregation = "cluster,namespace," + a.Aggregation
 	default:
 		log.Fatal("Aggregation type is wrong")
 	}

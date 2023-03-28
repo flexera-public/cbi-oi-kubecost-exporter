@@ -22,13 +22,11 @@ flexera:
   # -- flexera Organization ID
   orgId: ""
   # -- Bill Connect ID
-  billConnectId: ""
+  billConnectId: "cbi-oi-kubecost-1"
   # -- file upload timeout in seconds
   uploadTimeout: 600
   # -- Shard ("NAM", "EU")
   shard: "NAM"
-  # -- CSV file ManufacturerName
-  vendorName: "Google"
 
 kubecost:
   # -- default kubecost-cost-analyzer service host on the current cluster. For current cluster is <serviceName>.<namespaceName>.svc.cluster.local
