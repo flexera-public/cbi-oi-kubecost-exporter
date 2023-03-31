@@ -11,7 +11,7 @@ The application can be installed from golang sources, from a docker image or via
 This app requires Go version 1.16 or higher. To install, run:
 
 ```bash
-	go install github.com/flexera-public/cbi-oi-kubecost-exporter
+go install github.com/flexera-public/cbi-oi-kubecost-exporter
 ```
 
 The app is configured using environment variables defined in a .env file. The following configuration options are available:
@@ -40,19 +40,34 @@ flexera-kubecost-exporter
 
 There are two different approaches for passing custom Helm config values into the kubecost-exporter:
 
-1. Pass exact parameters via --set command-line flags:
+#### 1. Pass exact parameters via --set command-line flags:
 
 ```
 helm install kubecost-exporter helm-chart \
     --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
     --namespace kubecost-exporter --create-namespace \
     --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
-	--set flexera.orgId="1105" \
-	--set flexera.billConnectId="cbi-oi-kubecost-test-1" \
+    --set flexera.orgId="1105" \
+    --set flexera.billConnectId="cbi-oi-kubecost-test-1" \
     ...
 ```
 
-2. Pass exact parameters via custom values.yaml file:
+#### 2. Pass exact parameters via custom values.yaml file:
+
+2.1 Create a **values.yaml** file and add the necessary settings to it as below:
+
+```yml
+flexera:
+    refreshToken: "xx-xxxxxxxxx"
+    orgId: "7777"
+    billConnectId: "cbi-oi-kubecost-1"
+
+kubecost:
+    host: "demo.kubecost.xyz"
+    aggregation: "controller"
+```
+
+2.2 Apply this file when installing kubecost-exporter:
 
 ```
 helm install kubecost-exporter helm-chart \
@@ -65,28 +80,22 @@ helm install kubecost-exporter helm-chart \
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| cronSchedule | string | `"0 */6 * * *"` | setting up a cronJob scheduler to run an export task at the right time |
-| filePath | string | `"/var/kubecost"` |  |
-| fileRotation | bool | `true` |  |
-| flexera.billConnectId | string | `""` | Bill Connect ID |
-| flexera.host | string | `"api.flexera.com"` | IAM API Endpoint |
-| flexera.orgId | string | `""` | flexera Organization ID |
-| flexera.refreshToken | string | `""` | refresh Token from FlexeraOne |
+| cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the right time |
+| filePath | string | `"/var/kubecost"` | Filepath to mount persistent volume |
+| fileRotation | bool | `true` | Delete files generated for the previous month |
+| flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
+| flexera.orgId | string | `""` | Flexera Organization ID |
+| flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne |
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU") |
-| flexera.uploadTimeout | int | `600` | file upload timeout in seconds |
-| image.pullPolicy | string | `"IfNotPresent"` |  |
-| image.repository | string | `"docker.io/mirrr/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.0.0"` |  |
-| imagePullSecrets | list | `[]` |  |
 | kubecost.aggregation | string | `"controller"` | Aggregation Level ("namespace", "controller", "pod") |
-| kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | default kubecost-cost-analyzer service host on the current cluster. For current cluster is <serviceName>.<namespaceName>.svc.cluster.local |
+| kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Include cost of idle resources |
-| kubecost.multiplier | float | `1` | cost multiplier |
+| kubecost.multiplier | float | `1` | Cost multiplier |
 | kubecost.shareIdle | bool | `false` | Allocate idle cost proportionally |
 | kubecost.shareNamespaces | string | `"kube-system,cadvisor"` | Comma-separated list of namespaces to share costs |
 | kubecost.shareTenancyCosts | bool | `true` | Share the cost of cluster overhead assets such as cluster management costs |
-| persistentVolume.enabled | bool | `true` |  |
-| persistentVolume.size | string | `"1Gi"` |  |
+| persistentVolume.enabled | bool | `true` | Enable Persistent Volume. If this setting is disabled, it may lead to inability to store history and data uploads older than 15 days in Flexera One |
+| persistentVolume.size | string | `"1Gi"` | Persistent Volume size |
 
 ## License
 
