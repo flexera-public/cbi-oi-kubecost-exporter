@@ -105,7 +105,6 @@ type (
 		RefreshToken      string  `env:"REFRESH_TOKEN"`
 		OrgID             string  `env:"ORG_ID"`
 		BillConnectID     string  `env:"BILL_CONNECT_ID"`
-		UploadTimeout     int64   `env:"UPLOAD_TIMEOUT" envDefault:"600"`
 		Shard             string  `env:"SHARD" envDefault:"NAM"`
 		KubecostHost      string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
 		Aggregation       string  `env:"AGGREGATION" envDefault:"namespace"`
@@ -278,7 +277,7 @@ func (e *App) uploadToFlexera() {
 	billUpload := map[string]string{"billConnectId": e.BillConnectID, "billingPeriod": e.invoiceYearMonth}
 
 	billUploadJSON, _ := json.Marshal(billUpload)
-	response := e.doPost(billUploadURL, string(billUploadJSON), authHeaders, time.Minute)
+	response := e.doPost(billUploadURL, string(billUploadJSON), authHeaders)
 	existingID := ""
 
 	switch response.StatusCode {
@@ -311,7 +310,7 @@ func (e *App) uploadToFlexera() {
 		uploadFileURL := fmt.Sprintf("%s/%s/files/%s", billUploadURL, billUploadID, baseName)
 
 		fileData, _ := ioutil.ReadFile(fileName)
-		response = e.doPost(uploadFileURL, string(fileData), authHeaders, time.Duration(e.UploadTimeout)*time.Second)
+		response = e.doPost(uploadFileURL, string(fileData), authHeaders)
 		checkForError(response)
 	}
 
@@ -322,20 +321,14 @@ func (e *App) uploadToFlexera() {
 	os.Exit(0)
 }
 
-func (a *App) doPost(url, data string, headers map[string]string, uploadTimeout ...time.Duration) *http.Response {
-	client := a.client
-	if len(uploadTimeout) > 0 {
-		client = &http.Client{
-			Timeout: uploadTimeout[0],
-		}
-	}
+func (a *App) doPost(url, data string, headers map[string]string) *http.Response {
 	request, _ := http.NewRequest("POST", url, strings.NewReader(data))
 
 	for key, value := range headers {
 		request.Header.Set(key, value)
 	}
 
-	response, _ := client.Do(request)
+	response, _ := a.client.Do(request)
 	return response
 }
 
@@ -436,7 +429,7 @@ func (a *App) getCurrency() (string, error) {
 func newApp() *App {
 	a := App{
 		filesToUpload:    make(map[string]struct{}),
-		client:           &http.Client{Timeout: time.Minute},
+		client:           &http.Client{Timeout: 5 * time.Minute},
 		invoiceYearMonth: time.Now().Local().AddDate(0, 0, -1).Format("2006-01"),
 	}
 	if err := env.Parse(&a.Config); err != nil {

@@ -27,8 +27,6 @@ spec:
                 value: "{{ .Values.flexera.orgId }}"
               - name: BILL_CONNECT_ID
                 value: "{{ .Values.flexera.billConnectId }}"
-              - name: UPLOAD_TIMEOUT
-                value: "{{ .Values.flexera.uploadTimeout }}"
               - name: SHARD
                 value: "{{ .Values.flexera.shard }}"
               - name: KUBECOST_HOST

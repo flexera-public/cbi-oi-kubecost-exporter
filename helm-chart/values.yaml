@@ -10,26 +10,26 @@ image:
 imagePullSecrets: []
 
 persistentVolume:
+  # -- Persistent Volume size
   size: 1Gi
+  # -- Enable Persistent Volume. If this setting is disabled, it may lead to inability to store history and data uploads older than 15 days in Flexera One
   enabled: true
 
-# -- setting up a cronJob scheduler to run an export task at the right time
+# -- Setting up a cronJob scheduler to run an export task at the right time
 cronSchedule: "0 */6 * * *" # every 6 hours
 
 flexera:
-  # -- refresh Token from FlexeraOne
+  # -- Refresh Token from FlexeraOne
   refreshToken: ""
-  # -- flexera Organization ID
+  # -- Flexera Organization ID
   orgId: ""
   # -- Bill Connect ID
   billConnectId: "cbi-oi-kubecost-1"
-  # -- file upload timeout in seconds
-  uploadTimeout: 600
   # -- Shard ("NAM", "EU")
   shard: "NAM"
 
 kubecost:
-  # -- default kubecost-cost-analyzer service host on the current cluster. For current cluster is <serviceName>.<namespaceName>.svc.cluster.local
+  # -- Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local
   host: "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"
   # -- Aggregation Level ("namespace", "controller", "pod")
   aggregation: "controller"
@@ -41,11 +41,11 @@ kubecost:
   shareIdle: false
   # -- Share the cost of cluster overhead assets such as cluster management costs
   shareTenancyCosts: true
-  # -- cost multiplier
+  # -- Cost multiplier
   multiplier: 1.0
 
-# delete files generated for the previous month
+# -- Delete files generated for the previous month
 fileRotation: true
 
-# Filepath to mount persistent volume
+# -- Filepath to mount persistent volume
 filePath: "/var/kubecost"
