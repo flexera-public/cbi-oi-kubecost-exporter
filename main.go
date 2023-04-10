@@ -5,13 +5,14 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -125,6 +126,8 @@ type (
 		invoiceYearMonth string
 	}
 )
+
+var uuidPattern = regexp.MustCompile(`an existing billUpload \(ID: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`)
 
 func main() {
 	exporter := newApp()
@@ -286,7 +289,15 @@ func (e *App) uploadToFlexera() {
 		response = e.doPost(billUploadURL, string(billUploadJSON), authHeaders)
 		checkForError(response)
 	case 409:
-		existingID = strings.Split(response.Header.Get("message"), " ")[4][:len(response.Header.Get("message"))-1]
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		uuidMatch := uuidPattern.FindStringSubmatch(string(bodyBytes))
+		if len(uuidMatch) < 2 {
+			log.Fatal("billUpload ID not found")
+		}
+		existingID = uuidMatch[1]
 	default:
 		checkForError(response)
 	}
@@ -295,13 +306,14 @@ func (e *App) uploadToFlexera() {
 	if existingID != "" {
 		billUploadID = existingID
 	} else {
-
-		bodyBytes, err := ioutil.ReadAll(response.Body)
+		bodyBytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			log.Fatal(err)
 		}
 		var jsonResponse map[string]string
-		json.Unmarshal(bodyBytes, &jsonResponse)
+		if err = json.Unmarshal(bodyBytes, &jsonResponse); err != nil {
+			log.Fatal(err)
+		}
 		billUploadID = jsonResponse["id"]
 	}
 
@@ -309,7 +321,7 @@ func (e *App) uploadToFlexera() {
 		baseName := filepath.Base(fileName)
 		uploadFileURL := fmt.Sprintf("%s/%s/files/%s", billUploadURL, billUploadID, baseName)
 
-		fileData, _ := ioutil.ReadFile(fileName)
+		fileData, _ := os.ReadFile(fileName)
 		response = e.doPost(uploadFileURL, string(fileData), authHeaders)
 		checkForError(response)
 	}
@@ -317,8 +329,6 @@ func (e *App) uploadToFlexera() {
 	operationsURL := fmt.Sprintf("%s/%s/operations", billUploadURL, billUploadID)
 	response = e.doPost(operationsURL, `{"operation":"commit"}`, authHeaders)
 	checkForError(response)
-
-	os.Exit(0)
 }
 
 func (a *App) doPost(url, data string, headers map[string]string) *http.Response {
@@ -357,7 +367,7 @@ func (a *App) generateAccessToken() (string, error) {
 		return "", fmt.Errorf("error retrieving access token: %v", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading access token response body: %v", err)
 	}
@@ -375,15 +385,15 @@ func (a *App) generateAccessToken() (string, error) {
 
 // update file list and remove old files
 func (a *App) updateFileList() {
-	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	now := time.Now().Local()
-	files, err := ioutil.ReadDir(a.FilePath)
+	lastInvoiceDate := now.AddDate(0, 0, -1)
+	files, err := os.ReadDir(a.FilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, file := range files {
-		if file.Mode().IsRegular() {
+		if file.Type().IsRegular() {
 			if t, err := time.Parse("kubecost-2006-01-02.csv", file.Name()); err == nil {
 				if t.Month() == lastInvoiceDate.Month() {
 					a.filesToUpload[path.Join(a.FilePath, file.Name())] = struct{}{}
@@ -408,7 +418,7 @@ func (a *App) getCurrency() (string, error) {
 		return "", fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
 	}
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -452,6 +462,9 @@ func newApp() *App {
 
 func checkForError(response *http.Response) {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
+		if bodyBytes, err := io.ReadAll(response.Body); err == nil {
+			log.Println(string(bodyBytes))
+		}
 		log.Fatalf("Request failed with status code: %d", response.StatusCode)
 	}
 }
