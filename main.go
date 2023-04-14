@@ -242,7 +242,7 @@ func (e *App) updateFromKubecost() {
 						v.Properties.ControllerKind,
 						v.Properties.ProviderID,
 						labels,
-						e.invoiceYearMonth,
+						strings.ReplaceAll(e.invoiceYearMonth, "-", ""),
 						v.Window.Start,
 						v.Start,
 						v.End,
@@ -263,8 +263,8 @@ func (e *App) updateFromKubecost() {
 	}
 }
 
-func (e *App) uploadToFlexera() {
-	accessToken, err := e.generateAccessToken()
+func (a *App) uploadToFlexera() {
+	accessToken, err := a.generateAccessToken()
 	if err != nil {
 		log.Fatalf("Error generating access token: %v", err)
 	}
@@ -274,19 +274,19 @@ func (e *App) uploadToFlexera() {
 		"EU":  "api.optima-eu.flexeraeng.com",
 	}
 
-	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[strings.ToUpper(e.Shard)], e.OrgID)
+	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[strings.ToUpper(a.Shard)], a.OrgID)
 
 	authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
-	billUpload := map[string]string{"billConnectId": e.BillConnectID, "billingPeriod": e.invoiceYearMonth}
+	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": a.invoiceYearMonth}
 
 	billUploadJSON, _ := json.Marshal(billUpload)
-	response := e.doPost(billUploadURL, string(billUploadJSON), authHeaders)
+	response := a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
 	existingID := ""
 
 	switch response.StatusCode {
 	case 429:
 		time.Sleep(120 * time.Second)
-		response = e.doPost(billUploadURL, string(billUploadJSON), authHeaders)
+		response = a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
 		checkForError(response)
 	case 409:
 		bodyBytes, err := io.ReadAll(response.Body)
@@ -310,35 +310,41 @@ func (e *App) uploadToFlexera() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		var jsonResponse map[string]string
+		var jsonResponse map[string]interface{}
 		if err = json.Unmarshal(bodyBytes, &jsonResponse); err != nil {
 			log.Fatal(err)
 		}
-		billUploadID = jsonResponse["id"]
+		billUploadID = jsonResponse["id"].(string)
 	}
 
-	for fileName := range e.filesToUpload {
+	for fileName := range a.filesToUpload {
 		baseName := filepath.Base(fileName)
 		uploadFileURL := fmt.Sprintf("%s/%s/files/%s", billUploadURL, billUploadID, baseName)
 
 		fileData, _ := os.ReadFile(fileName)
-		response = e.doPost(uploadFileURL, string(fileData), authHeaders)
+		response = a.doPost(uploadFileURL, string(fileData), authHeaders)
 		checkForError(response)
 	}
 
 	operationsURL := fmt.Sprintf("%s/%s/operations", billUploadURL, billUploadID)
-	response = e.doPost(operationsURL, `{"operation":"commit"}`, authHeaders)
+	response = a.doPost(operationsURL, `{"operation":"commit"}`, authHeaders)
 	checkForError(response)
 }
 
 func (a *App) doPost(url, data string, headers map[string]string) *http.Response {
 	request, _ := http.NewRequest("POST", url, strings.NewReader(data))
+	log.Println("POST -->", url)
 
 	for key, value := range headers {
 		request.Header.Set(key, value)
 	}
 
-	response, _ := a.client.Do(request)
+	response, err := a.client.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("<--", response.StatusCode)
 	return response
 }
 
