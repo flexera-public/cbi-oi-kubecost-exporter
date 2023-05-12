@@ -18,7 +18,7 @@ The app is configured using environment variables defined in a .env file. The fo
 
 -   `KUBECOST_HOST` - the hostname of the Kubecost instance
 -   `BILL_CONNECT_ID` - the ID of the bill connect to which to upload the data
--   `SHARD` - the region of your Flexera One account. Valid values are NAM or EU.
+-   `SHARD` - the region of your Flexera One account. Valid values are NAM, EU or AU.
 -   `ORG_ID` - the ID of your Flexera One organization.
 -   `REFRESH_TOKEN` - the refresh token used to obtain an access token for the Flexera One API
 -   `AGGREGATION` - the level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod.
@@ -86,7 +86,7 @@ helm install kubecost-exporter helm-chart \
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
 | flexera.orgId | string | `""` | Flexera Organization ID |
 | flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne |
-| flexera.shard | string | `"NAM"` | Shard ("NAM", "EU") |
+| flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | kubecost.aggregation | string | `"controller"` | Aggregation Level ("namespace", "controller", "pod") |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Include cost of idle resources |

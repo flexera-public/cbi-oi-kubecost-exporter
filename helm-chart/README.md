@@ -1,6 +1,6 @@
 # Kubecost exporter helm chart for Kubernetes
 
-![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.0](https://img.shields.io/badge/AppVersion-1.0-informational?style=flat-square)
+![Version: 1.1.0](https://img.shields.io/badge/Version-1.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.1](https://img.shields.io/badge/AppVersion-1.1-informational?style=flat-square)
 
 There are two different ways to transfer custom Helm configuration values to the kubecost-exporter:
 
@@ -50,7 +50,7 @@ helm install kubecost-exporter helm-chart \
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
 | flexera.orgId | string | `""` | Flexera Organization ID |
 | flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne |
-| flexera.shard | string | `"NAM"` | Shard ("NAM", "EU") |
+| flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"latest"` |  |

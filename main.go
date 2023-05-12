@@ -108,7 +108,7 @@ type (
 		BillConnectID     string  `env:"BILL_CONNECT_ID"`
 		Shard             string  `env:"SHARD" envDefault:"NAM"`
 		KubecostHost      string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		Aggregation       string  `env:"AGGREGATION" envDefault:"namespace"`
+		Aggregation       string  `env:"AGGREGATION" envDefault:"pod"`
 		ShareNamespaces   string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
 		Idle              bool    `env:"IDLE" envDefault:"true"`
 		ShareIdle         bool    `env:"SHARE_IDLE" envDefault:"false"`
@@ -253,12 +253,12 @@ func (e *App) updateFromKubecost() {
 
 		writer.Flush()
 		var csvFile = fmt.Sprintf(path.Join(e.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
-		log.Println(csvFile)
 		e.filesToUpload[csvFile] = struct{}{}
 		err = os.WriteFile(csvFile, b.Bytes(), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Println("Retrieved", csvFile)
 		b.Reset()
 	}
 }
@@ -272,6 +272,7 @@ func (a *App) uploadToFlexera() {
 	shardDict := map[string]string{
 		"NAM": "api.optima.flexeraeng.com",
 		"EU":  "api.optima-eu.flexeraeng.com",
+		"AU":  "api.optima-apac.flexeraeng.com",
 	}
 
 	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[strings.ToUpper(a.Shard)], a.OrgID)
@@ -333,7 +334,7 @@ func (a *App) uploadToFlexera() {
 
 func (a *App) doPost(url, data string, headers map[string]string) *http.Response {
 	request, _ := http.NewRequest("POST", url, strings.NewReader(data))
-	log.Println("POST -->", url)
+	log.Printf("Request: %+v\n", url)
 
 	for key, value := range headers {
 		request.Header.Set(key, value)
@@ -344,13 +345,18 @@ func (a *App) doPost(url, data string, headers map[string]string) *http.Response
 		log.Fatal(err)
 	}
 
-	log.Println("<--", response.StatusCode)
+	log.Printf("Response Status Code: %+v\n", response.StatusCode)
 	return response
 }
 
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken.
 func (a *App) generateAccessToken() (string, error) {
-	accessTokenUrl := "https://login.flexera.com/oidc/token"
+	domainsDict := map[string]string{
+		"NAM": "flexera.com",
+		"EU":  "flexera.eu",
+		"AU":  "flexera.au",
+	}
+	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[strings.ToUpper(a.Shard)])
 	reqBody := url.Values{}
 	reqBody.Set("grant_type", "refresh_token")
 	reqBody.Set("refresh_token", a.RefreshToken)
