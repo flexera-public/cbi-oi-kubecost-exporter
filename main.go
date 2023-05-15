@@ -275,7 +275,7 @@ func (a *App) uploadToFlexera() {
 		"AU":  "api.optima-apac.flexeraeng.com",
 	}
 
-	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[strings.ToUpper(a.Shard)], a.OrgID)
+	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
 
 	authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
 	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": a.invoiceYearMonth}
@@ -356,7 +356,7 @@ func (a *App) generateAccessToken() (string, error) {
 		"EU":  "flexera.eu",
 		"AU":  "flexera.au",
 	}
-	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[strings.ToUpper(a.Shard)])
+	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[a.Shard])
 	reqBody := url.Values{}
 	reqBody.Set("grant_type", "refresh_token")
 	reqBody.Set("refresh_token", a.RefreshToken)
@@ -430,13 +430,8 @@ func (a *App) getCurrency() (string, error) {
 		return "", fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
 	var config KubecostConfig
-	err = json.Unmarshal(bodyBytes, &config)
+	err = json.NewDecoder(resp.Body).Decode(&config)
 	if err != nil {
 		return "", err
 	}
@@ -467,6 +462,12 @@ func newApp() *App {
 		a.aggregation = "cluster,namespace," + a.Aggregation
 	default:
 		log.Fatal("Aggregation type is wrong")
+	}
+
+	switch a.Shard {
+	case "NAM", "EU", "AU":
+	default:
+		log.Fatal("Shard is wrong")
 	}
 
 	return &a
