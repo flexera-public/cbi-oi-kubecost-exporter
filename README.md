@@ -87,7 +87,11 @@ helm install kubecost-exporter helm-chart \
 | flexera.orgId | string | `""` | Flexera Organization ID |
 | flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne |
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
-| kubecost.aggregation | string | `"controller"` | Aggregation Level ("namespace", "controller", "pod") |
+| image.pullPolicy | string | `"Always"` |  |
+| image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
+| image.tag | string | `"latest"` |  |
+| imagePullSecrets | list | `[]` |  |
+| kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Include cost of idle resources |
 | kubecost.multiplier | float | `1` | Cost multiplier |

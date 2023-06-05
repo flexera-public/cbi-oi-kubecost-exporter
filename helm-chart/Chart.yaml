@@ -1,7 +1,47 @@
 apiVersion: v2
 name: cbi-oi-kubecost-exporter
-description: Kubecost exporter helm chart for Kubernetes
 type: application
+description: |+
+  ### Kubecost exporter helm chart for Kubernetes
+
+  There are two different ways to transfer custom Helm configuration values to the kubecost-exporter:
+
+  #### 1. Pass exact parameters via --set command-line flags:
+
+  ```
+  helm install kubecost-exporter helm-chart \
+      --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
+      --namespace kubecost-exporter --create-namespace \
+      --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
+      --set flexera.orgId="1105" \
+      --set flexera.billConnectId="cbi-oi-kubecost-test-1" \
+      ...
+  ```
+
+  #### 2. Pass exact parameters via custom values.yaml file:
+
+  2.1 Create a **values.yaml** file and add the necessary settings to it as below:
+
+  ```yml
+  flexera:
+      refreshToken: "xx-xxxxxxxxx"
+      orgId: "7777"
+      billConnectId: "cbi-oi-kubecost-1"
+
+  kubecost:
+      host: "demo.kubecost.xyz"
+      aggregation: "controller"
+  ```
+
+  2.2 Apply this file when installing kubecost-exporter:
+
+  ```
+  helm install kubecost-exporter helm-chart \
+      --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
+      --namespace kubecost-exporter --create-namespace \
+      --values values.yaml
+  ```
+
 
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
