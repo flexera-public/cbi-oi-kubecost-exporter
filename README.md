@@ -43,12 +43,12 @@ There are two different approaches for passing custom Helm config values into th
 #### 1. Pass exact parameters via --set command-line flags:
 
 ```
-helm install kubecost-exporter helm-chart \
+helm install kubecost-exporter cbi-oi-kubecost-exporter \
     --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
     --namespace kubecost-exporter --create-namespace \
     --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
     --set flexera.orgId="1105" \
-    --set flexera.billConnectId="cbi-oi-kubecost-test-1" \
+    --set flexera.billConnectId="cbi-oi-kubecost-..." \
     ...
 ```
 
@@ -58,23 +58,62 @@ helm install kubecost-exporter helm-chart \
 
 ```yml
 flexera:
-    refreshToken: "xx-xxxxxxxxx"
-    orgId: "7777"
-    billConnectId: "cbi-oi-kubecost-1"
+    refreshToken: "Ek-aGVsbUBrdWJlY29zdC5jb20..."
+    orgId: "1105"
+    billConnectId: "cbi-oi-kubecost-..."
 
 kubecost:
-    host: "demo.kubecost.xyz"
-    aggregation: "controller"
+    aggregation: "pod"
 ```
 
 2.2 Apply this file when installing kubecost-exporter:
 
 ```
-helm install kubecost-exporter helm-chart \
+helm install kubecost-exporter cbi-oi-kubecost-exporter \
     --repo https://flexera-public.github.io/cbi-oi-kubecost-exporter/ \
     --namespace kubecost-exporter --create-namespace \
     --values values.yaml
 ```
+
+### Verifying configuration
+
+After successfully installing the helm chart, you can trigger the CronJob manually to ensure that everything is working as expected:
+
+1. Check the schedule of the CronJob:
+
+```
+kubectl get cronjobs -n <your-namespace>
+```
+
+The `SCHEDULE` column should reflect the schedule you have set (default: "0 _/6 _ \* \*"). The `NAME` column shows the name of your CronJob.
+
+2. Manually create a job from the CronJob:
+
+```
+kubectl create job --from=cronjob/<your-cronjob-name> manual-001 -n <your-namespace>
+```
+
+Replace `<your-cronjob-name>` with the name of your CronJob you obtained from the previous command.
+
+3. Monitor the logs of the job:
+
+First, get the name of the pod associated with the job you have just created:
+
+```
+kubectl get pods -n <your-namespace>
+```
+
+Look for the pod that starts with the name "manual-001".
+
+Then, fetch the logs:
+
+```
+kubectl logs <your-pod-name> -n <your-namespace>
+```
+
+Replace `<your-pod-name>` with the name of your pod.
+
+You should see 200/201s in the logs, which indicates that the exporter is working as expected. This means that the CronJob will also run successfully according to its schedule.
 
 ## Values
 
