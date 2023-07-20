@@ -158,10 +158,13 @@ func (e *App) updateFromKubecost() {
 		tomorrow := d.AddDate(0, 0, 1)
 
 		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
-		req, err := http.NewRequest("GET", fmt.Sprintf("http://%s%sallocation", e.KubecostHost, e.KubecostAPIPath), nil)
+		reqUrl := fmt.Sprintf("http://%s%sallocation", e.KubecostHost, e.KubecostAPIPath)
+		req, err := http.NewRequest("GET", reqUrl, nil)
+		log.Printf("Request: %+v\n", reqUrl)
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		q := req.URL.Query()
 		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
 		q.Add("aggregate", e.aggregation)
@@ -176,6 +179,7 @@ func (e *App) updateFromKubecost() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("Response Status Code: %+v\n", resp.StatusCode)
 
 		var j KubecostAllocationResponse
 		err = json.NewDecoder(resp.Body).Decode(&j)
@@ -421,10 +425,13 @@ func (a *App) updateFileList() {
 }
 
 func (a *App) getCurrency() (string, error) {
-	resp, err := a.client.Get(fmt.Sprintf("http://%s%sgetConfigs", a.KubecostHost, a.KubecostAPIPath))
+	reqUrl := fmt.Sprintf("http://%s%sgetConfigs", a.KubecostHost, a.KubecostAPIPath)
+	resp, err := a.client.Get(reqUrl)
+	log.Printf("Request: %+v\n", reqUrl)
 	if err != nil {
 		return "", err
 	}
+	log.Printf("Response Status Code: %+v\n", resp.StatusCode)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
