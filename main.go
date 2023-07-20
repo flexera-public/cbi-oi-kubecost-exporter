@@ -108,6 +108,7 @@ type (
 		BillConnectID     string  `env:"BILL_CONNECT_ID"`
 		Shard             string  `env:"SHARD" envDefault:"NAM"`
 		KubecostHost      string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath   string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
 		Aggregation       string  `env:"AGGREGATION" envDefault:"pod"`
 		ShareNamespaces   string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
 		Idle              bool    `env:"IDLE" envDefault:"true"`
@@ -157,7 +158,7 @@ func (e *App) updateFromKubecost() {
 		tomorrow := d.AddDate(0, 0, 1)
 
 		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
-		req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/model/allocation", e.KubecostHost), nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf("http://%s%sallocation", e.KubecostHost, e.KubecostAPIPath), nil)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -420,7 +421,7 @@ func (a *App) updateFileList() {
 }
 
 func (a *App) getCurrency() (string, error) {
-	resp, err := a.client.Get(fmt.Sprintf("http://%s/model/getConfigs", a.KubecostHost))
+	resp, err := a.client.Get(fmt.Sprintf("http://%s%sgetConfigs", a.KubecostHost, a.KubecostAPIPath))
 	if err != nil {
 		return "", err
 	}

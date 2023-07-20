@@ -1,14 +1,14 @@
 apiVersion: v1
 entries:
   cbi-oi-kubecost-exporter:
-    - apiVersion: v2
-      appVersion: "1.1"
-      created: "2023-03-21T21:28:24.287088-06:00"
-      description: Kubecost exporter helm chart for Kubernetes
-      digest: d7e7ed0b3afb644baee173b459a4ee3888bc4149b05982793f9e4987af950a40
-      name: cbi-oi-kubecost-exporter
-      type: application
-      urls:
-        - https://flexera-public.github.io/cbi-oi-kubecost-exporter/helm-chart/cbi-oi-kubecost-exporter-1.1.0.tgz
-      version: 1.1.0
-generated: "2023-03-21T21:28:24.286056-06:00"
+  - apiVersion: v2
+    appVersion: "1.2"
+    created: "2023-07-20T15:14:20.21782-06:00"
+    description: Kubecost exporter helm chart for Kubernetes
+    digest: d0c724c7bb085a1801e27f60ff748bc69aba14425cfd27fd132f99966692ed80
+    name: cbi-oi-kubecost-exporter
+    type: application
+    urls:
+    - https://flexera-public.github.io/cbi-oi-kubecost-exporter/helm-chart/cbi-oi-kubecost-exporter-1.2.0.tgz
+    version: 1.2.0
+generated: "2023-07-20T15:14:20.216393-06:00"
