@@ -31,6 +31,8 @@ flexera:
 kubecost:
   # -- Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local
   host: "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"
+  # -- Base path for the Kubecost API endpoints
+  apiPath: "/model/"
   # -- Aggregation Level ("namespace", "controller", "pod")
   aggregation: "pod"
   # -- Comma-separated list of namespaces to share costs

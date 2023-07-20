@@ -17,7 +17,7 @@ go install github.com/flexera-public/cbi-oi-kubecost-exporter
 The app is configured using environment variables defined in a .env file. The following configuration options are available:
 
 -   `KUBECOST_HOST` - the hostname of the Kubecost instance
--   `BILL_CONNECT_ID` - the ID of the bill connect to which to upload the data
+-   `BILL_CONNECT_ID` - the ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [this guide](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation.
 -   `SHARD` - the region of your Flexera One account. Valid values are NAM, EU or AU.
 -   `ORG_ID` - the ID of your Flexera One organization.
 -   `REFRESH_TOKEN` - the refresh token used to obtain an access token for the Flexera One API
@@ -85,7 +85,7 @@ After successfully installing the helm chart, you can trigger the CronJob manual
 kubectl get cronjobs -n <your-namespace>
 ```
 
-The `SCHEDULE` column should reflect the schedule you have set (default: "0 _/6 _ \* \*"). The `NAME` column shows the name of your CronJob.
+The `SCHEDULE` column should reflect the schedule you have set (default: "0 \*/6 \* \* \*"). The `NAME` column shows the name of your CronJob.
 
 2. Manually create a job from the CronJob:
 
@@ -131,6 +131,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | image.tag | string | `"latest"` |  |
 | imagePullSecrets | list | `[]` |  |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
+| kubecost.apiPath | string | `"/model/"` | Base path for the Kubecost API endpoints |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Include cost of idle resources |
 | kubecost.multiplier | float | `1` | Cost multiplier |

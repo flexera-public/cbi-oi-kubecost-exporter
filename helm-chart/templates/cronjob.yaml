@@ -31,6 +31,8 @@ spec:
                 value: "{{ .Values.flexera.shard }}"
               - name: KUBECOST_HOST
                 value: "{{ .Values.kubecost.host }}"
+              - name: KUBECOST_API_PATH
+                value: "{{ .Values.kubecost.apiPath }}"
               - name: AGGREGATION
                 value: "{{ .Values.kubecost.aggregation }}"
               - name: SHARE_NAMESPACES
