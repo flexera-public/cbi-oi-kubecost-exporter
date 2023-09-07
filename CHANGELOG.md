@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3
+
+-   Added namespaceLabels field to the exported field "labels" in the CSV file
+
 ## v1.2
 
 -   Added `apiPath` to `kubecost` configuration to support custom API paths.
