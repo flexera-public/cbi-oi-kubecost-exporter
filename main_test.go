@@ -19,6 +19,55 @@ func Test_dateIter(t *testing.T) {
 	}
 }
 
+func Test_extractLabels(t *testing.T) {
+	type args struct {
+		labels          map[string]string
+		namespaceLabels map[string]string
+	}
+	tests := []struct {
+		name           string
+		args           args
+		expextedLabels string
+	}{
+		{
+			name: "success: with labels and namespace labels",
+			args: args{
+				labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+				namespaceLabels: map[string]string{"label3": "us-weast-1a"},
+			},
+			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
+		},
+		{
+			name: "success: only with labels",
+			args: args{
+				labels: map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+			},
+			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\"}",
+		},
+		{
+			name: "success: with labels and some namespace labels repeated",
+			args: args{
+				labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+				namespaceLabels: map[string]string{"label1": "us-east-1a", "label3": "us-weast-1a"},
+			},
+			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
+		},
+		{
+			name:           "success: without labels or namespace labels",
+			args:           args{},
+			expextedLabels: "{}",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractLabels(tt.args.labels, tt.args.namespaceLabels)
+			if !reflect.DeepEqual(got, tt.expextedLabels) {
+				t.Errorf("extractLabels() got = %v, want %v", got, tt.expextedLabels)
+			}
+		})
+	}
+}
+
 func Test_newApp(t *testing.T) {
 	os.Setenv("REFRESH_TOKEN", "test_refresh_token")
 	os.Setenv("ORG_ID", "test_org_id")

@@ -79,16 +79,17 @@ type (
 	}
 
 	Properties struct {
-		Cluster        string            `json:"cluster"`
-		Container      string            `json:"container"`
-		Namespace      string            `json:"namespace"`
-		Pod            string            `json:"pod"`
-		Node           string            `json:"node"`
-		Controller     string            `json:"controller"`
-		ControllerKind string            `json:"controllerKind"`
-		Services       []string          `json:"services"`
-		ProviderID     string            `json:"providerID"`
-		Labels         map[string]string `json:"labels"`
+		Cluster         string            `json:"cluster"`
+		Container       string            `json:"container"`
+		Namespace       string            `json:"namespace"`
+		Pod             string            `json:"pod"`
+		Node            string            `json:"node"`
+		Controller      string            `json:"controller"`
+		ControllerKind  string            `json:"controllerKind"`
+		Services        []string          `json:"services"`
+		ProviderID      string            `json:"providerID"`
+		Labels          map[string]string `json:"labels"`
+		NamespaceLabels map[string]string `json:"namespaceLabels"`
 	}
 
 	Window struct {
@@ -217,8 +218,7 @@ func (e *App) updateFromKubecost() {
 
 		for _, allocation := range data {
 			for id, v := range allocation {
-				labelsJSON, _ := json.Marshal(v.Properties.Labels)
-				labels := string(labelsJSON)
+				labels := extractLabels(v.Properties.Labels, v.Properties.NamespaceLabels)
 				types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
 				vals := []float64{v.CPUCost, v.GPUCost, v.RAMCost, v.PVCost, v.NetworkCost, v.SharedCost, v.ExternalCost, v.LoadBalancerCost}
 				units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
@@ -504,4 +504,19 @@ func dateIter(startDate time.Time) <-chan time.Time {
 	}()
 
 	return c
+}
+
+func extractLabels(labels map[string]string, namespaceLabels map[string]string) string {
+	mapLabels := make(map[string]string)
+	if labels != nil {
+		mapLabels = labels
+	}
+	if namespaceLabels != nil {
+		for k, v := range namespaceLabels {
+			mapLabels[k] = v
+		}
+	}
+
+	labelsJSON, _ := json.Marshal(mapLabels)
+	return string(labelsJSON)
 }
