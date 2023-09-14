@@ -20,6 +20,15 @@ cronSchedule: "0 */6 * * *" # every 6 hours
 
 flexera:
   # -- Refresh Token from FlexeraOne
+  # You can provide the refresh token in two ways:
+  # 1. Directly as a string:
+  #    refreshToken: "your_token_here"
+  # 2. Reference it from a Kubernetes secret:
+  #    refreshToken:
+  #      valueFrom:
+  #        secretKeyRef:
+  #          name: flexera-secrets  # Name of the Kubernetes secret
+  #          key: refresh_token     # Key in the secret containing the refresh token
   refreshToken: ""
   # -- Flexera Organization ID
   orgId: ""

@@ -22,7 +22,11 @@ spec:
             {{- end }}
             env:
               - name: REFRESH_TOKEN
+              {{- if eq (typeOf .Values.flexera.refreshToken) "string" }}
                 value: "{{ .Values.flexera.refreshToken }}"
+              {{- else }}
+                {{- toYaml .Values.flexera.refreshToken | nindent 16 }}
+              {{- end }}
               - name: ORG_ID
                 value: "{{ .Values.flexera.orgId }}"
               - name: BILL_CONNECT_ID
