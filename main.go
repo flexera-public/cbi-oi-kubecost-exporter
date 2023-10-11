@@ -140,6 +140,7 @@ func main() {
 
 func (e *App) updateFromKubecost() {
 	now := time.Now().Local()
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	err := os.MkdirAll(e.FilePath, os.ModePerm)
 	if err != nil {
@@ -216,8 +217,13 @@ func (e *App) updateFromKubecost() {
 			"EndTime",
 		})
 
+		// Logs to validate date range requested and date range gotten in the data
+		log.Printf("Requested date range, from %s to %s \n", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z"))
+		mapDatesGotten := make(map[string]string)
+
 		for _, allocation := range data {
 			for id, v := range allocation {
+				mapDatesGotten[v.Start] = v.End
 				labels := extractLabels(v.Properties.Labels, v.Properties.NamespaceLabels)
 				types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
 				vals := []float64{v.CPUCost, v.GPUCost, v.RAMCost, v.PVCost, v.NetworkCost, v.SharedCost, v.ExternalCost, v.LoadBalancerCost}
@@ -255,6 +261,7 @@ func (e *App) updateFromKubecost() {
 				}
 			}
 		}
+		log.Printf("Gotten dates range: %v \n", mapDatesGotten)
 
 		writer.Flush()
 		var csvFile = fmt.Sprintf(path.Join(e.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
