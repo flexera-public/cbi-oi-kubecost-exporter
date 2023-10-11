@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4
+
+- Time window sent to kubecost API was corrected. Was added a config var to allow send previous month of data to Flexera.
+
 ## v1.3
 
 -   Added namespaceLabels field to the exported field "labels" in the CSV file
