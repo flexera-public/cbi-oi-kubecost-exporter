@@ -17,6 +17,7 @@ go install github.com/flexera-public/cbi-oi-kubecost-exporter
 The app is configured using environment variables defined in a .env file. The following configuration options are available:
 
 -   `KUBECOST_HOST` - the hostname of the Kubecost instance
+-   `KUBECOST_API_PATH` - the base path for the Kubecost API endpoints
 -   `BILL_CONNECT_ID` - the ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [this guide](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation.
 -   `SHARD` - the region of your Flexera One account. Valid values are NAM, EU or AU.
 -   `ORG_ID` - the ID of your Flexera One organization.
@@ -27,8 +28,9 @@ The app is configured using environment variables defined in a .env file. The fo
 -   `SHARE_TENANCY_COSTS` - a flag indicating whether to share tenancy costs among clusters
 -   `MULTIPLIER` - a multiplier to apply to the cost data
 -   `IDLE` - whether to include idle resources in the usage data. valid values are true or false.
+-   `FILE_ROTATION` - whether to delete files generated during the previous month (or the month before the previous month if ALLOW_PREVIOUS_MONTH is set to true). Valid values are true or false.
 -   `FILE_PATH` - the path where the CSV files are stored
--   `UPLOAD_TIMEOUT` - the timeout for uploading the CSV files to Flexera One, in seconds.
+-   `ALLOW_PREVIOUS_MONTH` - whether to allow export of data from previous month. valid values are true or false.
 
 To use this app, run:
 
@@ -36,9 +38,9 @@ To use this app, run:
 flexera-kubecost-exporter
 ```
 
-### Helm package manager
+### Kubecost exporter helm chart for Kubernetes
 
-There are two different approaches for passing custom Helm config values into the kubecost-exporter:
+There are two different ways to transfer custom Helm configuration values to the kubecost-exporter:
 
 #### 1. Pass exact parameters via --set command-line flags:
 
@@ -118,13 +120,14 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 ## Values
 
 | Key | Type | Default | Description |
-| --- | --- | --- | --- |
+|-----|------|---------|-------------|
+| allowPreviousMonth | bool | `false` | Allow export of data from previous month |
 | cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the right time |
 | filePath | string | `"/var/kubecost"` | Filepath to mount persistent volume |
-| fileRotation | bool | `true` | Delete files generated for the previous month |
+| fileRotation | bool | `true` | Delete files generated for the previous month (or the month before the previous month if ALLOW_PREVIOUS_MONTH is set to true) |
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
 | flexera.orgId | string | `""` | Flexera Organization ID |
-| flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne |
+| flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |

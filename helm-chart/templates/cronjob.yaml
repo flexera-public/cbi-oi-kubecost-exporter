@@ -53,6 +53,8 @@ spec:
                 value: "{{ .Values.fileRotation }}"
               - name: FILE_PATH
                 value: "{{ .Values.filePath }}"
+              - name: ALLOW_PREVIOUS_MONTH
+                value: "{{ .Values.allowPreviousMonth }}"
             volumeMounts:
               - name: persistent-configs
                 mountPath: {{ .Values.filePath }}
