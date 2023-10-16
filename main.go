@@ -104,28 +104,30 @@ type (
 	}
 
 	Config struct {
-		RefreshToken      string  `env:"REFRESH_TOKEN"`
-		OrgID             string  `env:"ORG_ID"`
-		BillConnectID     string  `env:"BILL_CONNECT_ID"`
-		Shard             string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost      string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath   string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation       string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces   string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle              bool    `env:"IDLE" envDefault:"true"`
-		ShareIdle         bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier        float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation      bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath          string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		RefreshToken         string  `env:"REFRESH_TOKEN"`
+		OrgID                string  `env:"ORG_ID"`
+		BillConnectID        string  `env:"BILL_CONNECT_ID"`
+		Shard                string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                 bool    `env:"IDLE" envDefault:"true"`
+		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 	}
 
 	App struct {
 		Config
-		aggregation      string
-		filesToUpload    map[string]struct{}
-		client           *http.Client
-		invoiceYearMonth string
+		aggregation     string
+		filesToUpload   map[string]map[string]struct{}
+		client          *http.Client
+		lastInvoiceDate time.Time
+		invoiceMonths   []string
 	}
 )
 
@@ -140,6 +142,7 @@ func main() {
 
 func (e *App) updateFromKubecost() {
 	now := time.Now().Local()
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	err := os.MkdirAll(e.FilePath, os.ModePerm)
 	if err != nil {
@@ -151,8 +154,8 @@ func (e *App) updateFromKubecost() {
 		log.Fatal(err)
 	}
 
-	for d := range dateIter(now.AddDate(0, -1, 0)) {
-		if d.After(now) || d.Format("2006-01") != e.invoiceYearMonth {
+	for d := range dateIter(now.AddDate(0, -(len(e.invoiceMonths)), 0)) {
+		if d.After(now) || !e.dateInInvoiceRange(d) {
 			continue
 		}
 
@@ -190,6 +193,16 @@ func (e *App) updateFromKubecost() {
 		resp.Body.Close()
 
 		data := j.Data
+		monthOfData := d.Format("2006-01")
+		var csvFile = fmt.Sprintf(path.Join(e.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
+
+		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
+		_, previousFileCreated := e.filesToUpload[monthOfData][csvFile]
+		if len(data) == 0 && previousFileCreated {
+			fmt.Printf("File %s has already been created and kubecost no longer has data for this same date range, skipping", csvFile)
+			continue
+		}
+
 		b := new(bytes.Buffer)
 		writer := csv.NewWriter(b)
 
@@ -216,8 +229,13 @@ func (e *App) updateFromKubecost() {
 			"EndTime",
 		})
 
+		// Logs to validate date range requested and date range gotten in the data
+		log.Printf("Requested date range, from %s to %s \n", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z"))
+		mapDatesGotten := make(map[string]string)
+
 		for _, allocation := range data {
 			for id, v := range allocation {
+				mapDatesGotten[v.Start] = v.End
 				labels := extractLabels(v.Properties.Labels, v.Properties.NamespaceLabels)
 				types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
 				vals := []float64{v.CPUCost, v.GPUCost, v.RAMCost, v.PVCost, v.NetworkCost, v.SharedCost, v.ExternalCost, v.LoadBalancerCost}
@@ -247,7 +265,7 @@ func (e *App) updateFromKubecost() {
 						v.Properties.ControllerKind,
 						v.Properties.ProviderID,
 						labels,
-						strings.ReplaceAll(e.invoiceYearMonth, "-", ""),
+						strings.ReplaceAll(monthOfData, "-", ""),
 						v.Window.Start,
 						v.Start,
 						v.End,
@@ -255,10 +273,11 @@ func (e *App) updateFromKubecost() {
 				}
 			}
 		}
+		log.Printf("Gotten dates range: %v \n", mapDatesGotten)
 
 		writer.Flush()
-		var csvFile = fmt.Sprintf(path.Join(e.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
-		e.filesToUpload[csvFile] = struct{}{}
+
+		e.filesToUpload[monthOfData][csvFile] = struct{}{}
 		err = os.WriteFile(csvFile, b.Bytes(), 0644)
 		if err != nil {
 			log.Fatal(err)
@@ -282,59 +301,61 @@ func (a *App) uploadToFlexera() {
 
 	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
 
-	authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
-	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": a.invoiceYearMonth}
+	for month, files := range a.filesToUpload {
+		authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
+		billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
 
-	billUploadJSON, _ := json.Marshal(billUpload)
-	response := a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
-	existingID := ""
+		billUploadJSON, _ := json.Marshal(billUpload)
+		response := a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
+		existingID := ""
 
-	switch response.StatusCode {
-	case 429:
-		time.Sleep(120 * time.Second)
-		response = a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
-		checkForError(response)
-	case 409:
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
+		switch response.StatusCode {
+		case 429:
+			time.Sleep(120 * time.Second)
+			response = a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
+			checkForError(response)
+		case 409:
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			uuidMatch := uuidPattern.FindStringSubmatch(string(bodyBytes))
+			if len(uuidMatch) < 2 {
+				log.Fatal("billUpload ID not found")
+			}
+			existingID = uuidMatch[1]
+		default:
+			checkForError(response)
 		}
-		uuidMatch := uuidPattern.FindStringSubmatch(string(bodyBytes))
-		if len(uuidMatch) < 2 {
-			log.Fatal("billUpload ID not found")
+
+		var billUploadID string
+		if existingID != "" {
+			billUploadID = existingID
+		} else {
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			var jsonResponse map[string]interface{}
+			if err = json.Unmarshal(bodyBytes, &jsonResponse); err != nil {
+				log.Fatal(err)
+			}
+			billUploadID = jsonResponse["id"].(string)
 		}
-		existingID = uuidMatch[1]
-	default:
+
+		for fileName := range files {
+			baseName := filepath.Base(fileName)
+			uploadFileURL := fmt.Sprintf("%s/%s/files/%s", billUploadURL, billUploadID, baseName)
+
+			fileData, _ := os.ReadFile(fileName)
+			response = a.doPost(uploadFileURL, string(fileData), authHeaders)
+			checkForError(response)
+		}
+
+		operationsURL := fmt.Sprintf("%s/%s/operations", billUploadURL, billUploadID)
+		response = a.doPost(operationsURL, `{"operation":"commit"}`, authHeaders)
 		checkForError(response)
 	}
-
-	var billUploadID string
-	if existingID != "" {
-		billUploadID = existingID
-	} else {
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		var jsonResponse map[string]interface{}
-		if err = json.Unmarshal(bodyBytes, &jsonResponse); err != nil {
-			log.Fatal(err)
-		}
-		billUploadID = jsonResponse["id"].(string)
-	}
-
-	for fileName := range a.filesToUpload {
-		baseName := filepath.Base(fileName)
-		uploadFileURL := fmt.Sprintf("%s/%s/files/%s", billUploadURL, billUploadID, baseName)
-
-		fileData, _ := os.ReadFile(fileName)
-		response = a.doPost(uploadFileURL, string(fileData), authHeaders)
-		checkForError(response)
-	}
-
-	operationsURL := fmt.Sprintf("%s/%s/operations", billUploadURL, billUploadID)
-	response = a.doPost(operationsURL, `{"operation":"commit"}`, authHeaders)
-	checkForError(response)
 }
 
 func (a *App) doPost(url, data string, headers map[string]string) *http.Response {
@@ -402,8 +423,6 @@ func (a *App) generateAccessToken() (string, error) {
 
 // update file list and remove old files
 func (a *App) updateFileList() {
-	now := time.Now().Local()
-	lastInvoiceDate := now.AddDate(0, 0, -1)
 	files, err := os.ReadDir(a.FilePath)
 	if err != nil {
 		log.Fatal(err)
@@ -412,9 +431,9 @@ func (a *App) updateFileList() {
 	for _, file := range files {
 		if file.Type().IsRegular() {
 			if t, err := time.Parse("kubecost-2006-01-02.csv", file.Name()); err == nil {
-				if t.Month() == lastInvoiceDate.Month() {
-					a.filesToUpload[path.Join(a.FilePath, file.Name())] = struct{}{}
-				} else if a.FileRotation && t.Month() != now.Month() {
+				if a.dateInInvoiceRange(t) {
+					a.filesToUpload[t.Format("2006-01")][path.Join(a.FilePath, file.Name())] = struct{}{}
+				} else if a.FileRotation {
 					if err = os.Remove(path.Join(a.FilePath, file.Name())); err != nil {
 						log.Printf("error removing file %s: %v", file.Name(), err)
 					}
@@ -451,14 +470,33 @@ func (a *App) getCurrency() (string, error) {
 	return config.Data.CurrencyCode, nil
 }
 
+func (a *App) dateInInvoiceRange(date time.Time) bool {
+	for _, month := range a.invoiceMonths {
+		if date.Format("2006-01") == month {
+			return true
+		}
+	}
+	return false
+}
+
 func newApp() *App {
+	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
-		filesToUpload:    make(map[string]struct{}),
-		client:           &http.Client{Timeout: 5 * time.Minute},
-		invoiceYearMonth: time.Now().Local().AddDate(0, 0, -1).Format("2006-01"),
+		filesToUpload:   make(map[string]map[string]struct{}),
+		client:          &http.Client{Timeout: 5 * time.Minute},
+		lastInvoiceDate: lastInvoiceDate,
 	}
 	if err := env.Parse(&a.Config); err != nil {
 		log.Fatal(err)
+	}
+
+	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
+	if a.IncludePreviousMonth {
+		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
+	}
+
+	for _, month := range a.invoiceMonths {
+		a.filesToUpload[month] = make(map[string]struct{})
 	}
 
 	a.Aggregation = strings.ToLower(a.Aggregation)
@@ -497,7 +535,7 @@ func dateIter(startDate time.Time) <-chan time.Time {
 
 	go func() {
 		defer close(c)
-		for !time.Now().Before(startDate) {
+		for !time.Now().Local().Before(startDate) {
 			c <- startDate
 			startDate = startDate.AddDate(0, 0, 1)
 		}

@@ -55,8 +55,11 @@ kubecost:
   # -- Cost multiplier
   multiplier: 1.0
 
-# -- Delete files generated for the previous month
+# -- Delete files generated for the previous month (or the month before the previous month if INCLUDE_PREVIOUS_MONTH is set to true)
 fileRotation: true
 
 # -- Filepath to mount persistent volume
 filePath: "/var/kubecost"
+
+# -- Include data from previous month to export process
+includePreviousMonth: false
