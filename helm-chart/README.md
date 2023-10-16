@@ -85,10 +85,9 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| allowPreviousMonth | bool | `false` | Allow export of data from previous month |
 | cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the right time |
 | filePath | string | `"/var/kubecost"` | Filepath to mount persistent volume |
-| fileRotation | bool | `true` | Delete files generated for the previous month (or the month before the previous month if ALLOW_PREVIOUS_MONTH is set to true) |
+| fileRotation | bool | `true` | Delete files generated for the previous month (or the month before the previous month if INCLUDE_PREVIOUS_MONTH is set to true) |
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
 | flexera.orgId | string | `""` | Flexera Organization ID |
 | flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
@@ -97,6 +96,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"latest"` |  |
 | imagePullSecrets | list | `[]` |  |
+| includePreviousMonth | bool | `false` | Include data from previous month to export process |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
 | kubecost.apiPath | string | `"/model/"` | Base path for the Kubecost API endpoints |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |

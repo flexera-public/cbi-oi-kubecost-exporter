@@ -141,8 +141,8 @@ func Test_newApp(t *testing.T) {
 
 func TestApp_dateInInvoiceRange(t *testing.T) {
 	type args struct {
-		allowPreviousmonth string
-		date               time.Time
+		includePreviousMonth string
+		date                 time.Time
 	}
 	tests := []struct {
 		name string
@@ -152,37 +152,37 @@ func TestApp_dateInInvoiceRange(t *testing.T) {
 		{
 			name: "success: date in range",
 			args: args{
-				allowPreviousmonth: "false",
-				date:               time.Now().Local().AddDate(0, 0, -1),
+				includePreviousMonth: "false",
+				date:                 time.Now().Local().AddDate(0, 0, -1),
 			},
 			want: true,
 		},
 		{
 			name: "success: date in range using previous month env var as true",
 			args: args{
-				allowPreviousmonth: "true",
-				date:               time.Now().Local().AddDate(0, -1, 0),
+				includePreviousMonth: "true",
+				date:                 time.Now().Local().AddDate(0, -1, 0),
 			},
 			want: true,
 		},
 		{
 			name: "fail: date out of range using previous month env var as false",
 			args: args{
-				allowPreviousmonth: "false",
-				date:               time.Now().Local().AddDate(0, -1, 0),
+				includePreviousMonth: "false",
+				date:                 time.Now().Local().AddDate(0, -1, 0),
 			},
 			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Setenv("ALLOW_PREVIOUS_MONTH", tt.args.allowPreviousmonth)
+			os.Setenv("INCLUDE_PREVIOUS_MONTH", tt.args.includePreviousMonth)
 			a := newApp()
 
 			if got := a.dateInInvoiceRange(tt.args.date); got != tt.want {
 				t.Errorf("dateInInvoiceRange() = %v, want %v", got, tt.want)
 			}
-			os.Unsetenv("ALLOW_PREVIOUS_MONTH")
+			os.Unsetenv("INCLUDE_PREVIOUS_MONTH")
 		})
 	}
 }

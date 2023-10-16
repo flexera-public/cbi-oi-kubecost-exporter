@@ -104,21 +104,21 @@ type (
 	}
 
 	Config struct {
-		RefreshToken       string  `env:"REFRESH_TOKEN"`
-		OrgID              string  `env:"ORG_ID"`
-		BillConnectID      string  `env:"BILL_CONNECT_ID"`
-		Shard              string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost       string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath    string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation        string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces    string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle               bool    `env:"IDLE" envDefault:"true"`
-		ShareIdle          bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts  bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier         float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation       bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath           string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		AllowPreviousMonth bool    `env:"ALLOW_PREVIOUS_MONTH" envDefault:"false"`
+		RefreshToken         string  `env:"REFRESH_TOKEN"`
+		OrgID                string  `env:"ORG_ID"`
+		BillConnectID        string  `env:"BILL_CONNECT_ID"`
+		Shard                string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                 bool    `env:"IDLE" envDefault:"true"`
+		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 	}
 
 	App struct {
@@ -491,7 +491,7 @@ func newApp() *App {
 	}
 
 	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
-	if a.AllowPreviousMonth {
+	if a.IncludePreviousMonth {
 		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
 	}
 
