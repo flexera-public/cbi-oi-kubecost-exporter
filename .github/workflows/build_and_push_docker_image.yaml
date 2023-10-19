@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - main
-      - "test-*"
-    tags:
-      - "release-*"
-      - "test-*"
-  pull_request:
-    types: [assigned, opened, synchronize, reopened]
 
 jobs:
   build-and-push:
@@ -23,16 +17,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
-      - name: Extract version from Chart.yaml or git tag
+      - name: Extract version from Chart.yaml
         id: extract_version
         run: |
-          if [[ "${{ github.event_name }}" == "push" && -z "${{ github.event.release }}" ]]; then
-            VERSION=$(grep 'appVersion:' ./helm-chart/Chart.yaml | awk '{print $$2}' | tr -d '"')
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            VERSION=$(echo ${GITHUB_REF#refs/tags/})
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          fi
+          VERSION=$(grep 'appVersion:' ./helm-chart/Chart.yaml | awk '{print $$2}' | tr -d '"')
+          echo "version=$VERSION" >> $GITHUB_ENV
         shell: bash
 
       - name: Configure AWS credentials
@@ -61,4 +50,4 @@ jobs:
           push: true
           tags: |
             public.ecr.aws/flexera/cbi-oi-kubecost-exporter:${{ steps.extract_version.outputs.version }}
-            ${{ (github.ref == 'refs/heads/main') && 'public.ecr.aws/flexera/cbi-oi-kubecost-exporter:latest' || '' }}
+            public.ecr.aws/flexera/cbi-oi-kubecost-exporter:latest
