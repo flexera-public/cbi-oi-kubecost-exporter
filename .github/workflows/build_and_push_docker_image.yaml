@@ -17,6 +17,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
+      - name: Extract version from Chart.yaml
+        id: extract_version
+        run: |
+          VERSION=$(awk -F": " '/appVersion:/ {print $2}' ./helm-chart/Chart.yaml | tr -d '"')
+          echo "Extracted version: $VERSION"
+          echo "::set-output name=version::$VERSION"
+        shell: bash
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -41,4 +49,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: public.ecr.aws/flexera/cbi-oi-kubecost-exporter:latest
+          tags: |
+            public.ecr.aws/flexera/cbi-oi-kubecost-exporter:${{ steps.extract_version.outputs.version }}
+            public.ecr.aws/flexera/cbi-oi-kubecost-exporter:latest
