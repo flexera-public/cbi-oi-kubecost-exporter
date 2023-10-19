@@ -3,9 +3,9 @@ entries:
   cbi-oi-kubecost-exporter:
   - apiVersion: v2
     appVersion: "1.4"
-    created: "2023-10-19T13:20:30.472343-06:00"
+    created: "2023-10-19T13:23:11.848738-06:00"
     description: Kubecost exporter helm chart for Kubernetes
-    digest: 0764874c5d940ff15cabc88315291598989514a5db1bf823ebedda2565577ade
+    digest: ab6992a0af9f24d5c090db71679b7f274f3576b1cfbe91325e0d6e9af317657e
     name: cbi-oi-kubecost-exporter
     type: application
     urls:
@@ -13,7 +13,7 @@ entries:
     version: 1.4.1
   - apiVersion: v2
     appVersion: "1.4"
-    created: "2023-10-19T13:20:30.471499-06:00"
+    created: "2023-10-19T13:23:11.848386-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 870030e989ba274f8b0f9d122a4ada24a4d29ef2c071408bf46d86e18942effd
     name: cbi-oi-kubecost-exporter
@@ -23,7 +23,7 @@ entries:
     version: 1.4.0
   - apiVersion: v2
     appVersion: "1.3"
-    created: "2023-10-19T13:20:30.471227-06:00"
+    created: "2023-10-19T13:23:11.848033-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 0d967927bfab5f4bb6d40ce062710679e98b145c4b3f38709c0bf5d216ad8606
     name: cbi-oi-kubecost-exporter
@@ -33,7 +33,7 @@ entries:
     version: 1.3.0
   - apiVersion: v2
     appVersion: "1.2"
-    created: "2023-10-19T13:20:30.470276-06:00"
+    created: "2023-10-19T13:23:11.847211-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: d0c724c7bb085a1801e27f60ff748bc69aba14425cfd27fd132f99966692ed80
     name: cbi-oi-kubecost-exporter
@@ -43,7 +43,7 @@ entries:
     version: 1.2.0
   - apiVersion: v2
     appVersion: "1.1"
-    created: "2023-10-19T13:20:30.469881-06:00"
+    created: "2023-10-19T13:23:11.846807-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: c6f2681575b704b5934efea2357921896d55c4ad5e09692f31ab92b9e614cfea
     name: cbi-oi-kubecost-exporter
@@ -51,4 +51,4 @@ entries:
     urls:
     - helm-chart/cbi-oi-kubecost-exporter-1.1.0.tgz
     version: 1.1.0
-generated: "2023-10-19T13:20:30.468762-06:00"
+generated: "2023-10-19T13:23:11.846038-06:00"
