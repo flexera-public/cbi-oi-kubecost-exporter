@@ -1,12 +1,9 @@
 # Changelog
 
-## v1.6
-
-- Added new env var IDLE_BY_NODE to manage if idle allocations are created on a per node basis
-
 ## v1.5
 
 - Added costAdjustments for cpuCost, gpuCost, ramCost, pvCost, networkCost and loadBalancerCost
+- Added new env var IDLE_BY_NODE to manage if idle allocations are created on a per node basis
 
 ## v1.4
 

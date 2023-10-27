@@ -131,7 +131,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.6"` |  |
+| image.tag | string | `"1.5"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Include data from previous month to export process |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
