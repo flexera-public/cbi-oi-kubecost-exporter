@@ -78,6 +78,7 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("AGGREGATION", "controller")
 	os.Setenv("SHARE_NAMESPACES", "test_namespace1,test_namespace2")
 	os.Setenv("IDLE", "true")
+	os.Setenv("IDLE_BY_NODE", "false")
 	os.Setenv("SHARE_IDLE", "false")
 	os.Setenv("SHARE_TENANCY_COSTS", "true")
 	os.Setenv("MULTIPLIER", "1")
@@ -94,6 +95,7 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("AGGREGATION")
 		os.Unsetenv("SHARE_NAMESPACES")
 		os.Unsetenv("IDLE")
+		os.Unsetenv("IDLE_BY_NODE")
 		os.Unsetenv("SHARE_IDLE")
 		os.Unsetenv("SHARE_TENANCY_COSTS")
 		os.Unsetenv("MULTIPLIER")
@@ -128,6 +130,7 @@ func Test_newApp(t *testing.T) {
 		Aggregation:       "controller",
 		ShareNamespaces:   "test_namespace1,test_namespace2",
 		Idle:              true,
+		IdleByNode:        false,
 		ShareIdle:         false,
 		ShareTenancyCosts: true,
 		Multiplier:        1.0,

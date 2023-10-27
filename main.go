@@ -113,6 +113,7 @@ type (
 		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
 		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
 		Idle                 bool    `env:"IDLE" envDefault:"true"`
+		IdleByNode           bool    `env:"IDLE_BY_NODE" envDefault:"false"`
 		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
 		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
 		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
@@ -173,6 +174,7 @@ func (a *App) updateFromKubecost() {
 		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
 		q.Add("aggregate", a.aggregation)
 		q.Add("idle", fmt.Sprintf("%t", a.Idle))
+		q.Add("idleByNode", fmt.Sprintf("%t", a.IdleByNode))
 		q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
 		q.Add("shareNamespaces", a.ShareNamespaces)
 		q.Add("shareSplit", "weighted")
@@ -199,7 +201,7 @@ func (a *App) updateFromKubecost() {
 		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
 		_, previousFileCreated := a.filesToUpload[monthOfData][csvFile]
 		if len(data) == 0 && previousFileCreated {
-			fmt.Printf("File %s has already been created and kubecost no longer has data for this same date range, skipping", csvFile)
+			log.Printf("File %s has already been created and kubecost no longer has data for this same date range, skipping", csvFile)
 			continue
 		}
 
