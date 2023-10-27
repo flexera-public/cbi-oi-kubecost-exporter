@@ -140,29 +140,29 @@ func main() {
 	exporter.uploadToFlexera()
 }
 
-func (e *App) updateFromKubecost() {
+func (a *App) updateFromKubecost() {
 	now := time.Now().Local()
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	err := os.MkdirAll(e.FilePath, os.ModePerm)
+	err := os.MkdirAll(a.FilePath, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	curr, err := e.getCurrency()
+	currency, err := a.getCurrency()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for d := range dateIter(now.AddDate(0, -(len(e.invoiceMonths)), 0)) {
-		if d.After(now) || !e.dateInInvoiceRange(d) {
+	for d := range dateIter(now.AddDate(0, -(len(a.invoiceMonths)), 0)) {
+		if d.After(now) || !a.dateInInvoiceRange(d) {
 			continue
 		}
 
 		tomorrow := d.AddDate(0, 0, 1)
 
 		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
-		reqUrl := fmt.Sprintf("http://%s%sallocation", e.KubecostHost, e.KubecostAPIPath)
+		reqUrl := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
 		req, err := http.NewRequest("GET", reqUrl, nil)
 		log.Printf("Request: %+v\n", reqUrl)
 		if err != nil {
@@ -171,15 +171,15 @@ func (e *App) updateFromKubecost() {
 
 		q := req.URL.Query()
 		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
-		q.Add("aggregate", e.aggregation)
-		q.Add("idle", fmt.Sprintf("%t", e.Idle))
-		q.Add("shareIdle", fmt.Sprintf("%t", e.ShareIdle))
-		q.Add("shareNamespaces", e.ShareNamespaces)
+		q.Add("aggregate", a.aggregation)
+		q.Add("idle", fmt.Sprintf("%t", a.Idle))
+		q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
+		q.Add("shareNamespaces", a.ShareNamespaces)
 		q.Add("shareSplit", "weighted")
-		q.Add("shareTenancyCosts", fmt.Sprintf("%t", e.ShareTenancyCosts))
+		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
 		req.URL.RawQuery = q.Encode()
 
-		resp, err := e.client.Do(req)
+		resp, err := a.client.Do(req)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -194,10 +194,10 @@ func (e *App) updateFromKubecost() {
 
 		data := j.Data
 		monthOfData := d.Format("2006-01")
-		var csvFile = fmt.Sprintf(path.Join(e.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
+		var csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
 
 		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
-		_, previousFileCreated := e.filesToUpload[monthOfData][csvFile]
+		_, previousFileCreated := a.filesToUpload[monthOfData][csvFile]
 		if len(data) == 0 && previousFileCreated {
 			fmt.Printf("File %s has already been created and kubecost no longer has data for this same date range, skipping", csvFile)
 			continue
@@ -206,78 +206,17 @@ func (e *App) updateFromKubecost() {
 		b := new(bytes.Buffer)
 		writer := csv.NewWriter(b)
 
-		writer.Write([]string{
-			"ResourceID",
-			"Cost",
-			"CurrencyCode",
-			"Aggregation",
-			"UsageType",
-			"UsageAmount",
-			"UsageUnit",
-			"Cluster",
-			"Container",
-			"Namespace",
-			"Pod",
-			"Node",
-			"Controller",
-			"ControllerKind",
-			"ProviderID",
-			"Labels",
-			"InvoiceYearMonth",
-			"InvoiceDate",
-			"StartTime",
-			"EndTime",
-		})
+		writer.Write(a.getCSVHeaders())
 
 		// Logs to validate date range requested and date range gotten in the data
 		log.Printf("Requested date range, from %s to %s \n", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z"))
-		mapDatesGotten := make(map[string]string)
 
-		for _, allocation := range data {
-			for id, v := range allocation {
-				mapDatesGotten[v.Start] = v.End
-				labels := extractLabels(v.Properties.Labels, v.Properties.NamespaceLabels)
-				types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
-				vals := []float64{v.CPUCost, v.GPUCost, v.RAMCost, v.PVCost, v.NetworkCost, v.SharedCost, v.ExternalCost, v.LoadBalancerCost}
-				units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
-				amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
-
-				for i, c := range types {
-					multiplierFloat := e.Multiplier * vals[i]
-					if v.Properties.Cluster == "" {
-						v.Properties.Cluster = "Cluster"
-					}
-
-					writer.Write([]string{
-						id,
-						strconv.FormatFloat(multiplierFloat, 'f', 2, 64),
-						curr,
-						e.Aggregation,
-						c,
-						strconv.FormatFloat(amounts[i], 'f', 2, 64),
-						units[i],
-						v.Properties.Cluster,
-						v.Properties.Container,
-						v.Properties.Namespace,
-						v.Properties.Pod,
-						v.Properties.Node,
-						v.Properties.Controller,
-						v.Properties.ControllerKind,
-						v.Properties.ProviderID,
-						labels,
-						strings.ReplaceAll(monthOfData, "-", ""),
-						v.Window.Start,
-						v.Start,
-						v.End,
-					})
-				}
-			}
+		for _, row := range a.getCSVRows(currency, monthOfData, data) {
+			writer.Write(row)
 		}
-		log.Printf("Gotten dates range: %v \n", mapDatesGotten)
-
 		writer.Flush()
 
-		e.filesToUpload[monthOfData][csvFile] = struct{}{}
+		a.filesToUpload[monthOfData][csvFile] = struct{}{}
 		err = os.WriteFile(csvFile, b.Bytes(), 0644)
 		if err != nil {
 			log.Fatal(err)
@@ -517,6 +456,87 @@ func newApp() *App {
 	}
 
 	return &a
+}
+
+func (a *App) getCSVHeaders() []string {
+	return []string{
+		"ResourceID",
+		"Cost",
+		"CurrencyCode",
+		"Aggregation",
+		"UsageType",
+		"UsageAmount",
+		"UsageUnit",
+		"Cluster",
+		"Container",
+		"Namespace",
+		"Pod",
+		"Node",
+		"Controller",
+		"ControllerKind",
+		"ProviderID",
+		"Labels",
+		"InvoiceYearMonth",
+		"InvoiceDate",
+		"StartTime",
+		"EndTime",
+	}
+}
+
+func (a *App) getCSVRows(currency string, month string, data []map[string]KubecostAllocation) [][]string {
+	rows := make([][]string, 0)
+	mapDatesGotten := make(map[string]string)
+	for _, allocation := range data {
+		for id, v := range allocation {
+			mapDatesGotten[v.Start] = v.End
+			labels := extractLabels(v.Properties.Labels, v.Properties.NamespaceLabels)
+			types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
+			vals := []float64{
+				v.CPUCost + v.CPUCostAdjustment,
+				v.GPUCost + v.GPUCostAdjustment,
+				v.RAMCost + v.RAMCostAdjustment,
+				v.PVCost + v.PVCostAdjustment,
+				v.NetworkCost + v.NetworkCostAdjustment,
+				v.SharedCost,
+				v.ExternalCost,
+				v.LoadBalancerCost + v.LoadBalancerCostAdjustment,
+			}
+			units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
+			amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
+
+			for i, c := range types {
+				multiplierFloat := a.Multiplier * vals[i]
+				if v.Properties.Cluster == "" {
+					v.Properties.Cluster = "Cluster"
+				}
+
+				rows = append(rows, []string{
+					id,
+					strconv.FormatFloat(multiplierFloat, 'f', 2, 64),
+					currency,
+					a.Aggregation,
+					c,
+					strconv.FormatFloat(amounts[i], 'f', 2, 64),
+					units[i],
+					v.Properties.Cluster,
+					v.Properties.Container,
+					v.Properties.Namespace,
+					v.Properties.Pod,
+					v.Properties.Node,
+					v.Properties.Controller,
+					v.Properties.ControllerKind,
+					v.Properties.ProviderID,
+					labels,
+					strings.ReplaceAll(month, "-", ""),
+					v.Window.Start,
+					v.Start,
+					v.End,
+				})
+			}
+		}
+	}
+	log.Printf("Gotten dates range: %v \n", mapDatesGotten)
+	return rows
 }
 
 func checkForError(response *http.Response) {

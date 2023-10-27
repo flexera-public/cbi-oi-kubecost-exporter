@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"reflect"
 	"testing"
@@ -183,6 +184,177 @@ func TestApp_dateInInvoiceRange(t *testing.T) {
 				t.Errorf("dateInInvoiceRange() = %v, want %v", got, tt.want)
 			}
 			os.Unsetenv("INCLUDE_PREVIOUS_MONTH")
+		})
+	}
+}
+
+func TestApp_getCSVRows(t *testing.T) {
+	type args struct {
+		currency string
+		month    string
+		data     []map[string]KubecostAllocation
+	}
+
+	dataJson := `[{
+            "nonprod-cluster/fish": {
+                "name": "nonprod-cluster/fish",
+                "properties": {
+                    "cluster": "nonprod-cluster",
+                    "node": "aks-npu01z2-15-vmss00000z",
+                    "container": "fleet-agent",
+                    "controller": "fleet-agent",
+                    "controllerKind": "deployment",
+                    "namespace": "fish",
+                    "pod": "fleet-agent-7bccbd54bc-zn8b8",
+                    "providerID": "azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+                    "labels": {
+                        "app": "fleet-agent",
+                        "crosscharge_aks": "crosscharge"
+                    },
+                    "namespaceLabels": {
+                        "field_cattle_io_projectId": "p-jj7wc"
+                    }
+                },
+                "window": {
+                    "start": "2023-10-15T00:00:00Z",
+                    "end": "2023-10-16T00:00:00Z"
+                },
+                "start": "2023-10-15T00:00:00Z",
+                "end": "2023-10-16T00:00:00Z",
+                "minutes": 1440,
+                "cpuCores": 0.00566,
+                "cpuCoreRequestAverage": 0,
+                "cpuCoreUsageAverage": 0.00664,
+                "cpuCoreHours": 0.13594,
+                "cpuCost": 0.0977,
+                "cpuCostAdjustment": -0.0235,
+                "cpuEfficiency": 1,
+                "gpuCount": 0,
+                "gpuHours": 0,
+                "gpuCost": 0,
+                "gpuCostAdjustment": 0,
+                "networkTransferBytes": 230280247.65369,
+                "networkReceiveBytes": 3834780812.31544,
+                "networkCost": 0.00004,
+                "networkCrossZoneCost": 0,
+                "networkCrossRegionCost": 0,
+                "networkInternetCost": 0.00004,
+                "networkCostAdjustment": 0,
+                "loadBalancerCost": 0,
+                "loadBalancerCostAdjustment": 0,
+                "pvBytes": 0,
+                "pvByteHours": 0,
+                "pvCost": 0,
+                "pvs": null,
+                "pvCostAdjustment": 0,
+                "ramBytes": 168877026.13333,
+                "ramByteRequestAverage": 0,
+                "ramByteUsageAverage": 180387256.21762,
+                "ramByteHours": 4053048627.2,
+                "ramCost": 0.2033,
+                "ramCostAdjustment": -0.0321,
+                "ramEfficiency": 1,
+                "externalCost": 0,
+                "sharedCost": 0.00003,
+                "totalCost": 0.0246,
+                "totalEfficiency": 1,
+                "rawAllocationOnly": {
+                    "cpuCoreUsageMax": 0.04475121093829057,
+                    "ramByteUsageMax": 320245760
+                },
+                "lbAllocations": null
+            }
+        }
+    ]`
+
+	var data []map[string]KubecostAllocation
+	err := json.Unmarshal([]byte(dataJson), &data)
+	if err != nil {
+		t.Errorf("Error unmarshalling data: %v", err)
+	}
+
+	var expectedRows [][]string
+	expectedRows = make([][]string, 0)
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.07", "USD", "pod", "cpuCost", "0.14", "cpuCoreHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "gpuCost", "0.00", "gpuHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.17", "USD", "pod", "ramCost", "4053048627.20", "ramByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "pvCost", "0.00", "pvByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "networkCost", "230280247.65", "networkTransferBytes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "sharedCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "externalCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+	expectedRows = append(expectedRows,
+		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "loadBalancerCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+
+	tests := []struct {
+		name string
+		args args
+		want [][]string
+	}{
+		{
+			name: "success: date in range",
+			args: args{
+				currency: "USD",
+				month:    "2023-10",
+				data:     data,
+			},
+			want: expectedRows,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newApp()
+
+			got := a.getCSVRows(tt.args.currency, tt.args.month, tt.args.data)
+			if len(got) != len(tt.want) {
+				t.Errorf("len getCSVRows() = %v, want %v", len(got), len(tt.want))
+				return
+			}
+			// Find all records got in want
+			for _, rowGot := range got {
+				found := false
+				for _, rowWant := range tt.want {
+					if reflect.DeepEqual(rowGot, rowWant) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("row %v not found in want", rowGot)
+				}
+
+			}
+
 		})
 	}
 }

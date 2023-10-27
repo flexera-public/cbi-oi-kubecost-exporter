@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5
+
+- Added costAdjustments for cpuCost, gpuCost, ramCost, pvCost, networkCost and loadBalancerCost
+
 ## v1.4
 
 - Time window sent to kubecost API was corrected. Was added a config var to allow send previous month of data to Flexera.
