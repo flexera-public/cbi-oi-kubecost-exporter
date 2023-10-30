@@ -43,6 +43,8 @@ spec:
                 value: "{{ .Values.kubecost.shareNamespaces }}"
               - name: IDLE
                 value: "{{ .Values.kubecost.idle }}"
+              - name: IDLE_BY_NODE
+                value: "{{ .Values.kubecost.idleByNode }}"
               - name: SHARE_IDLE
                 value: "{{ .Values.kubecost.shareIdle }}"
               - name: SHARE_TENANCY_COSTS

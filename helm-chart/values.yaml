@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.4"
+  tag: "1.5"
 
 imagePullSecrets: []
 
@@ -48,6 +48,8 @@ kubecost:
   shareNamespaces: "kube-system,cadvisor"
   # -- Include cost of idle resources
   idle: true
+  # -- Idle allocations are created on a per node basis
+  idleByNode: false
   # -- Allocate idle cost proportionally
   shareIdle: false
   # -- Share the cost of cluster overhead assets such as cluster management costs
