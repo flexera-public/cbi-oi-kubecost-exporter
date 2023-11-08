@@ -85,6 +85,7 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("FILE_ROTATION", "true")
 	os.Setenv("FILE_PATH", "/var/kubecost")
 	os.Setenv("KUBECOST_API_PATH", "/model/")
+	os.Setenv("SEND_ONLY_FULL_PREVIOUS_MONTH", "true")
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
@@ -102,6 +103,7 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("FILE_ROTATION")
 		os.Unsetenv("FILE_PATH")
 		os.Unsetenv("KUBECOST_API_PATH")
+		os.Unsetenv("SEND_ONLY_FULL_PREVIOUS_MONTH")
 	}()
 
 	a := newApp()
@@ -122,21 +124,23 @@ func Test_newApp(t *testing.T) {
 	}
 
 	expectedConfig := Config{
-		RefreshToken:      "test_refresh_token",
-		OrgID:             "test_org_id",
-		BillConnectID:     "test_bill_connect_id",
-		Shard:             "NAM",
-		KubecostHost:      "test_kubecost_host",
-		Aggregation:       "controller",
-		ShareNamespaces:   "test_namespace1,test_namespace2",
-		Idle:              true,
-		IdleByNode:        false,
-		ShareIdle:         false,
-		ShareTenancyCosts: true,
-		Multiplier:        1.0,
-		FileRotation:      true,
-		FilePath:          "/var/kubecost",
-		KubecostAPIPath:   "/model/",
+		RefreshToken:              "test_refresh_token",
+		OrgID:                     "test_org_id",
+		BillConnectID:             "test_bill_connect_id",
+		Shard:                     "NAM",
+		KubecostHost:              "test_kubecost_host",
+		Aggregation:               "controller",
+		ShareNamespaces:           "test_namespace1,test_namespace2",
+		Idle:                      true,
+		IdleByNode:                false,
+		ShareIdle:                 false,
+		ShareTenancyCosts:         true,
+		Multiplier:                1.0,
+		FileRotation:              true,
+		FilePath:                  "/var/kubecost",
+		KubecostAPIPath:           "/model/",
+		IncludePreviousMonth:      false,
+		SendOnlyFullPreviousMonth: true,
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)
@@ -358,6 +362,132 @@ func TestApp_getCSVRows(t *testing.T) {
 
 			}
 
+		})
+	}
+}
+
+func TestApp_dateInMandatoryFileSavingPeriod(t *testing.T) {
+	type args struct {
+		customStartDateOfMandatoryPeriod *time.Time
+		date                             time.Time
+	}
+
+	firstDayOfMonth, _ := time.Parse("2006-01-02", "2023-10-01")
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "success: date in mandatory period",
+			args: args{
+				customStartDateOfMandatoryPeriod: nil,
+				date:                             time.Now().Local().AddDate(0, 0, -1),
+			},
+			want: true,
+		},
+		{
+			name: "success: one month before current date",
+			args: args{
+				customStartDateOfMandatoryPeriod: nil,
+				date:                             time.Now().Local().AddDate(0, -1, 0),
+			},
+			want: true,
+		},
+		{
+			name: "fail: one day before the mandatory period",
+			args: args{
+				customStartDateOfMandatoryPeriod: &firstDayOfMonth,
+				date:                             firstDayOfMonth.AddDate(0, 0, -1),
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newApp()
+			if tt.args.customStartDateOfMandatoryPeriod != nil {
+				a.mandatoryFileSavingPeriodStartDate = *tt.args.customStartDateOfMandatoryPeriod
+			}
+			if got := a.dateInMandatoryFileSavingPeriod(tt.args.date); got != tt.want {
+				t.Errorf("dateInMandatoryFileSavingPeriod() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApp_isCurrentMonth(t *testing.T) {
+	type args struct {
+		month string
+	}
+	now := time.Now().Local()
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "success: current month",
+			args: args{month: now.Format("2006-01")},
+			want: true,
+		},
+		{
+			name: "fail: previous month",
+			args: args{month: now.AddDate(0, -1, 0).Format("2006-01")},
+			want: false,
+		},
+		{
+			name: "fail: next month",
+			args: args{month: now.AddDate(0, 1, 0).Format("2006-01")},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newApp()
+			if got := a.isCurrentMonth(tt.args.month); got != tt.want {
+				t.Errorf("isCurrentMonth() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApp_DaysInMonth(t *testing.T) {
+	type args struct {
+		month string
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "success: October 2023",
+			args: args{month: "2023-10"},
+			want: 31,
+		},
+		{
+			name: "success: February 2023",
+			args: args{month: "2023-02"},
+			want: 28,
+		},
+		{
+			name: "success: February 2024",
+			args: args{month: "2024-02"},
+			want: 29,
+		},
+		{
+			name: "success: November 2023",
+			args: args{month: "2023-11"},
+			want: 30,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newApp()
+			if got := a.DaysInMonth(tt.args.month); got != tt.want {
+				t.Errorf("DaysInMonth() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

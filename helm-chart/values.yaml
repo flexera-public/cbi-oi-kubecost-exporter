@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.5"
+  tag: "1.6"
 
 imagePullSecrets: []
 
@@ -65,3 +65,6 @@ filePath: "/var/kubecost"
 
 # -- Include data from previous month to export process
 includePreviousMonth: false
+
+# -- Send data from previous month, only if we have all the data for the previous month (just works in case we have set INCLUDE_PREVIOUS_MONTH as true)
+sendOnlyFullPreviousMonth: true

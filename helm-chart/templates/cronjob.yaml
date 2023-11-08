@@ -57,6 +57,8 @@ spec:
                 value: "{{ .Values.filePath }}"
               - name: INCLUDE_PREVIOUS_MONTH
                 value: "{{ .Values.includePreviousMonth }}"
+              - name: SEND_ONLY_FULL_PREVIOUS_MONTH
+                value: "{{ .Values.sendOnlyFullPreviousMonth }}"
             volumeMounts:
               - name: persistent-configs
                 mountPath: {{ .Values.filePath }}

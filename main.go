@@ -104,31 +104,33 @@ type (
 	}
 
 	Config struct {
-		RefreshToken         string  `env:"REFRESH_TOKEN"`
-		OrgID                string  `env:"ORG_ID"`
-		BillConnectID        string  `env:"BILL_CONNECT_ID"`
-		Shard                string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle                 bool    `env:"IDLE" envDefault:"true"`
-		IdleByNode           bool    `env:"IDLE_BY_NODE" envDefault:"false"`
-		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		RefreshToken              string  `env:"REFRESH_TOKEN"`
+		OrgID                     string  `env:"ORG_ID"`
+		BillConnectID             string  `env:"BILL_CONNECT_ID"`
+		Shard                     string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost              string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath           string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation               string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces           string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                      bool    `env:"IDLE" envDefault:"true"`
+		IdleByNode                bool    `env:"IDLE_BY_NODE" envDefault:"false"`
+		ShareIdle                 bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts         bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier                float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation              bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath                  string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth      bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		SendOnlyFullPreviousMonth bool    `env:"SEND_ONLY_FULL_PREVIOUS_MONTH" envDefault:"true"`
 	}
 
 	App struct {
 		Config
-		aggregation     string
-		filesToUpload   map[string]map[string]struct{}
-		client          *http.Client
-		lastInvoiceDate time.Time
-		invoiceMonths   []string
+		aggregation                        string
+		filesToUpload                      map[string]map[string]struct{}
+		client                             *http.Client
+		lastInvoiceDate                    time.Time
+		invoiceMonths                      []string
+		mandatoryFileSavingPeriodStartDate time.Time
 	}
 )
 
@@ -198,6 +200,11 @@ func (a *App) updateFromKubecost() {
 		monthOfData := d.Format("2006-01")
 		var csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
 
+		if j.Code != http.StatusOK {
+			log.Println("Kubecost API response code different than 200, skipping")
+			continue
+		}
+
 		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
 		_, previousFileCreated := a.filesToUpload[monthOfData][csvFile]
 		if len(data) == 0 && previousFileCreated {
@@ -243,6 +250,19 @@ func (a *App) uploadToFlexera() {
 	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
 
 	for month, files := range a.filesToUpload {
+
+		if len(files) == 0 {
+			log.Println("No files to upload for month", month)
+			continue
+		}
+
+		// if we try to upload files for previous month, and we have configured SEND_ONLY_FULL_PREVIOUS_MONTH as true
+		// we need to check if we have files for all days in the month
+		if !a.isCurrentMonth(month) && a.SendOnlyFullPreviousMonth && a.DaysInMonth(month) != len(files) {
+			log.Println("Skipping month", month, "because not all days have a file to upload")
+			continue
+		}
+
 		authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
 		billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
 
@@ -374,7 +394,7 @@ func (a *App) updateFileList() {
 			if t, err := time.Parse("kubecost-2006-01-02.csv", file.Name()); err == nil {
 				if a.dateInInvoiceRange(t) {
 					a.filesToUpload[t.Format("2006-01")][path.Join(a.FilePath, file.Name())] = struct{}{}
-				} else if a.FileRotation {
+				} else if a.FileRotation && !a.dateInMandatoryFileSavingPeriod(t) {
 					if err = os.Remove(path.Join(a.FilePath, file.Name())); err != nil {
 						log.Printf("error removing file %s: %v", file.Name(), err)
 					}
@@ -420,6 +440,23 @@ func (a *App) dateInInvoiceRange(date time.Time) bool {
 	return false
 }
 
+func (a *App) dateInMandatoryFileSavingPeriod(date time.Time) bool {
+	return !date.Before(a.mandatoryFileSavingPeriodStartDate)
+}
+
+func (a *App) isCurrentMonth(month string) bool {
+	return time.Now().Local().Format("2006-01") == month
+}
+
+func (a *App) DaysInMonth(month string) int {
+	date, err := time.Parse("2006-01", month)
+	if err != nil {
+		return 0
+	}
+	numDays := date.AddDate(0, 1, 0).Sub(date).Hours() / 24
+	return int(numDays)
+}
+
 func newApp() *App {
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
@@ -435,6 +472,9 @@ func newApp() *App {
 	if a.IncludePreviousMonth {
 		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
 	}
+	// The mandatory file saving period is the period since the first day of the previous month of last invoice date
+	previousMonthOfLastInvoiceDate := lastInvoiceDate.AddDate(0, -1, 0)
+	a.mandatoryFileSavingPeriodStartDate = time.Date(previousMonthOfLastInvoiceDate.Year(), previousMonthOfLastInvoiceDate.Month(), 1, 0, 0, 0, 0, previousMonthOfLastInvoiceDate.Location())
 
 	for _, month := range a.invoiceMonths {
 		a.filesToUpload[month] = make(map[string]struct{})

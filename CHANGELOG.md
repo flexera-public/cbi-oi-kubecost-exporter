@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.6
+
+- Save two months of cvs files instead of only current month.
+- Added new env var SEND_ONLY_FULL_PREVIOUS_MONTH to manage if we send data from previous month only if we have all the data for the previous month.
+- Validate that the number of files to upload match with the number of days of the previous month, in case the above var is set to true. 
+
 ## v1.5
 
 - Added costAdjustments for cpuCost, gpuCost, ramCost, pvCost, networkCost and loadBalancerCost
