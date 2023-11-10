@@ -85,7 +85,6 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("FILE_ROTATION", "true")
 	os.Setenv("FILE_PATH", "/var/kubecost")
 	os.Setenv("KUBECOST_API_PATH", "/model/")
-	os.Setenv("SEND_ONLY_FULL_PREVIOUS_MONTH", "true")
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
@@ -103,7 +102,6 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("FILE_ROTATION")
 		os.Unsetenv("FILE_PATH")
 		os.Unsetenv("KUBECOST_API_PATH")
-		os.Unsetenv("SEND_ONLY_FULL_PREVIOUS_MONTH")
 	}()
 
 	a := newApp()
@@ -124,23 +122,22 @@ func Test_newApp(t *testing.T) {
 	}
 
 	expectedConfig := Config{
-		RefreshToken:              "test_refresh_token",
-		OrgID:                     "test_org_id",
-		BillConnectID:             "test_bill_connect_id",
-		Shard:                     "NAM",
-		KubecostHost:              "test_kubecost_host",
-		Aggregation:               "controller",
-		ShareNamespaces:           "test_namespace1,test_namespace2",
-		Idle:                      true,
-		IdleByNode:                false,
-		ShareIdle:                 false,
-		ShareTenancyCosts:         true,
-		Multiplier:                1.0,
-		FileRotation:              true,
-		FilePath:                  "/var/kubecost",
-		KubecostAPIPath:           "/model/",
-		IncludePreviousMonth:      false,
-		SendOnlyFullPreviousMonth: true,
+		RefreshToken:         "test_refresh_token",
+		OrgID:                "test_org_id",
+		BillConnectID:        "test_bill_connect_id",
+		Shard:                "NAM",
+		KubecostHost:         "test_kubecost_host",
+		Aggregation:          "controller",
+		ShareNamespaces:      "test_namespace1,test_namespace2",
+		Idle:                 true,
+		IdleByNode:           false,
+		ShareIdle:            false,
+		ShareTenancyCosts:    true,
+		Multiplier:           1.0,
+		FileRotation:         true,
+		FilePath:             "/var/kubecost",
+		KubecostAPIPath:      "/model/",
+		IncludePreviousMonth: false,
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)

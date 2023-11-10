@@ -96,7 +96,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.6"` |  |
 | imagePullSecrets | list | `[]` |  |
-| includePreviousMonth | bool | `false` | Include data from previous month to export process |
+| includePreviousMonth | bool | `false` | Include data from previous month to the export process, only if we have files from every day of the previous month. |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
 | kubecost.apiPath | string | `"/model/"` | Base path for the Kubecost API endpoints |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
@@ -108,5 +108,4 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | kubecost.shareTenancyCosts | bool | `true` | Share the cost of cluster overhead assets such as cluster management costs |
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. If this setting is disabled, it may lead to inability to store history and data uploads older than 15 days in Flexera One |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size |
-| sendOnlyFullPreviousMonth | bool | `true` | Send data from previous month, only if we have all the data for the previous month (just works in case we have set INCLUDE_PREVIOUS_MONTH as true) |
 

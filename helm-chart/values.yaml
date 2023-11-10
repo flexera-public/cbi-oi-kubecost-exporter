@@ -63,8 +63,6 @@ fileRotation: true
 # -- Filepath to mount persistent volume
 filePath: "/var/kubecost"
 
-# -- Include data from previous month to export process
+# -- Include data from previous month to the export process, only if we have files from every day of the previous month.
 includePreviousMonth: false
 
-# -- Send data from previous month, only if we have all the data for the previous month (just works in case we have set INCLUDE_PREVIOUS_MONTH as true)
-sendOnlyFullPreviousMonth: true

@@ -104,23 +104,22 @@ type (
 	}
 
 	Config struct {
-		RefreshToken              string  `env:"REFRESH_TOKEN"`
-		OrgID                     string  `env:"ORG_ID"`
-		BillConnectID             string  `env:"BILL_CONNECT_ID"`
-		Shard                     string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost              string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath           string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation               string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces           string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle                      bool    `env:"IDLE" envDefault:"true"`
-		IdleByNode                bool    `env:"IDLE_BY_NODE" envDefault:"false"`
-		ShareIdle                 bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts         bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier                float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation              bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath                  string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		IncludePreviousMonth      bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
-		SendOnlyFullPreviousMonth bool    `env:"SEND_ONLY_FULL_PREVIOUS_MONTH" envDefault:"true"`
+		RefreshToken         string  `env:"REFRESH_TOKEN"`
+		OrgID                string  `env:"ORG_ID"`
+		BillConnectID        string  `env:"BILL_CONNECT_ID"`
+		Shard                string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                 bool    `env:"IDLE" envDefault:"true"`
+		IdleByNode           bool    `env:"IDLE_BY_NODE" envDefault:"false"`
+		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 	}
 
 	App struct {
@@ -256,9 +255,8 @@ func (a *App) uploadToFlexera() {
 			continue
 		}
 
-		// if we try to upload files for previous month, and we have configured SEND_ONLY_FULL_PREVIOUS_MONTH as true
-		// we need to check if we have files for all days in the month
-		if !a.isCurrentMonth(month) && a.SendOnlyFullPreviousMonth && a.DaysInMonth(month) != len(files) {
+		// if we try to upload files for previous month, we need to check if we have files for all days in the month
+		if !a.isCurrentMonth(month) && a.DaysInMonth(month) != len(files) {
 			log.Println("Skipping month", month, "because not all days have a file to upload")
 			continue
 		}
