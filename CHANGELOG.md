@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.6
+
+- Save two months of cvs files instead of only current month.
+- When uploading files for previous month, exporter validates that the number of files to upload match with the number of days of the previous month.
+
 ## v1.5
 
 - Added costAdjustments for cpuCost, gpuCost, ramCost, pvCost, networkCost and loadBalancerCost

@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.5"
+  tag: "1.6"
 
 imagePullSecrets: []
 
@@ -63,5 +63,6 @@ fileRotation: true
 # -- Filepath to mount persistent volume
 filePath: "/var/kubecost"
 
-# -- Include data from previous month to export process
+# -- Include data from previous month to the export process, only if we have files from every day of the previous month.
 includePreviousMonth: false
+

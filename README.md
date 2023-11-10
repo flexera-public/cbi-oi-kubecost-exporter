@@ -31,8 +31,8 @@ The app is configured using environment variables defined in a .env file. The fo
 -   `IDLE_BY_NODE` - Idle allocations are created on a per node basis.
 -   `FILE_ROTATION` - whether to delete files generated during the previous month (or the month before the previous month if INCLUDE_PREVIOUS_MONTH is set to true). Valid values are true or false.
 -   `FILE_PATH` - the path where the CSV files are stored
--   `INCLUDE_PREVIOUS_MONTH` - whether to include data from previous month to export process. Valid values are true or false.
-
+-   `INCLUDE_PREVIOUS_MONTH` - whether to include data from previous month to export process, only if we have files from every day of the previous month.. Valid values are true or false.
+ 
 To use this app, run:
 
 ```bash
@@ -131,9 +131,9 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.5"` |  |
+| image.tag | string | `"1.6"` |  |
 | imagePullSecrets | list | `[]` |  |
-| includePreviousMonth | bool | `false` | Include data from previous month to export process |
+| includePreviousMonth | bool | `false` | Include data from previous month to the export process, only if we have files from every day of the previous month. |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
 | kubecost.apiPath | string | `"/model/"` | Base path for the Kubecost API endpoints |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
