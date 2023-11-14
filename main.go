@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -101,6 +103,13 @@ type (
 		Data struct {
 			CurrencyCode string `json:"currencyCode"`
 		}
+	}
+
+	OptimaFileUploadResponse struct {
+		ID           string `json:"id"`
+		Status       string `json:"status"`
+		BillUploadID string `json:"billUploadId"`
+		MD5          string `json:"md5"`
 	}
 
 	Config struct {
@@ -309,6 +318,21 @@ func (a *App) uploadToFlexera() {
 			fileData, _ := os.ReadFile(fileName)
 			response = a.doPost(uploadFileURL, string(fileData), authHeaders)
 			checkForError(response)
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				log.Fatalf("Error reading response: %s", err.Error())
+			}
+			response.Body.Close()
+			var uploadResponse OptimaFileUploadResponse
+			if err = json.Unmarshal(bodyBytes, &uploadResponse); err != nil {
+				log.Fatalf("Error parsing response: %s", err.Error())
+			}
+
+			md5 := getMD5FromFileBytes(fileData)
+			if md5 != uploadResponse.MD5 {
+				log.Fatalf("MD5 of file %s does not match MD5 of uploaded file", fileName)
+			}
+			log.Printf("File %s uploaded and MD5 of file matches MD5 of uploaded file", fileName)
 		}
 
 		operationsURL := fmt.Sprintf("%s/%s/operations", billUploadURL, billUploadID)
@@ -617,4 +641,11 @@ func extractLabels(labels map[string]string, namespaceLabels map[string]string) 
 
 	labelsJSON, _ := json.Marshal(mapLabels)
 	return string(labelsJSON)
+}
+
+func getMD5FromFileBytes(fileBytes []byte) string {
+	hash := md5.New()
+	hash.Write(fileBytes)
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
