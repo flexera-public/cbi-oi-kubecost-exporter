@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"reflect"
@@ -484,6 +485,28 @@ func TestApp_DaysInMonth(t *testing.T) {
 			a := newApp()
 			if got := a.DaysInMonth(tt.args.month); got != tt.want {
 				t.Errorf("DaysInMonth() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetMD5FromFileBytes(t *testing.T) {
+	// Define a test case with an input byte slice and the expected MD5 hash
+	testCases := []struct {
+		input    []byte
+		expected string
+	}{
+		{[]byte("Hello, World!"), "65a8e27d8879283831b664bd8b7f0ad4"},
+		{[]byte("12345"), "827ccb0eea8a706c4c34a16891f84e7b"},
+		{[]byte(""), "d41d8cd98f00b204e9800998ecf8427e"},
+		{[]byte("*/&!"), "e720300025e73ebfd5320f06e5e1919a"},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(hex.EncodeToString(testCase.input), func(t *testing.T) {
+			result := getMD5FromFileBytes(testCase.input)
+			if result != testCase.expected {
+				t.Errorf("Expected: %s, Got: %s", testCase.expected, result)
 			}
 		})
 	}

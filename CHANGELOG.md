@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7
+
+- The MD5 hash of the files is verified to ensure the integrity of the uploaded files.
+
 ## v1.6
 
 - Save two months of cvs files instead of only current month.
