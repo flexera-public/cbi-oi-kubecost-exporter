@@ -139,6 +139,7 @@ type (
 		lastInvoiceDate                    time.Time
 		invoiceMonths                      []string
 		mandatoryFileSavingPeriodStartDate time.Time
+		billUploadURL                      string
 	}
 )
 
@@ -249,13 +250,7 @@ func (a *App) uploadToFlexera() {
 		log.Fatalf("Error generating access token: %v", err)
 	}
 
-	shardDict := map[string]string{
-		"NAM": "api.optima.flexeraeng.com",
-		"EU":  "api.optima-eu.flexeraeng.com",
-		"AU":  "api.optima-apac.flexeraeng.com",
-	}
-
-	billUploadURL := fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
+	authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
 
 	for month, files := range a.filesToUpload {
 
@@ -270,78 +265,141 @@ func (a *App) uploadToFlexera() {
 			continue
 		}
 
-		authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
-		billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
-
-		billUploadJSON, _ := json.Marshal(billUpload)
-		response := a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
-		existingID := ""
-
-		switch response.StatusCode {
-		case 429:
-			time.Sleep(120 * time.Second)
-			response = a.doPost(billUploadURL, string(billUploadJSON), authHeaders)
-			checkForError(response)
-		case 409:
-			bodyBytes, err := io.ReadAll(response.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			uuidMatch := uuidPattern.FindStringSubmatch(string(bodyBytes))
-			if len(uuidMatch) < 2 {
-				log.Fatal("billUpload ID not found")
-			}
-			existingID = uuidMatch[1]
-		default:
-			checkForError(response)
-		}
-
-		var billUploadID string
-		if existingID != "" {
-			billUploadID = existingID
-		} else {
-			bodyBytes, err := io.ReadAll(response.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-			var jsonResponse map[string]interface{}
-			if err = json.Unmarshal(bodyBytes, &jsonResponse); err != nil {
-				log.Fatal(err)
-			}
-			billUploadID = jsonResponse["id"].(string)
+		billUploadID, err := a.StartBillUploadProcess(month, authHeaders)
+		if err != nil {
+			log.Println(err)
+			continue
 		}
 
 		for fileName := range files {
-			baseName := filepath.Base(fileName)
-			uploadFileURL := fmt.Sprintf("%s/%s/files/%s", billUploadURL, billUploadID, baseName)
-
-			fileData, _ := os.ReadFile(fileName)
-			response = a.doPost(uploadFileURL, string(fileData), authHeaders)
-			checkForError(response)
-			bodyBytes, err := io.ReadAll(response.Body)
+			err = a.UploadFile(billUploadID, fileName, authHeaders)
 			if err != nil {
-				log.Fatalf("Error reading response: %s", err.Error())
+				log.Printf("Error uploading file: %s. %s\n", fileName, err.Error())
+				break
 			}
-			response.Body.Close()
-			var uploadResponse OptimaFileUploadResponse
-			if err = json.Unmarshal(bodyBytes, &uploadResponse); err != nil {
-				log.Fatalf("Error parsing response: %s", err.Error())
-			}
-
-			md5 := getMD5FromFileBytes(fileData)
-			if md5 != uploadResponse.MD5 {
-				log.Fatalf("MD5 of file %s does not match MD5 of uploaded file", fileName)
-			}
-			log.Printf("File %s uploaded and MD5 of file matches MD5 of uploaded file", fileName)
 		}
 
-		operationsURL := fmt.Sprintf("%s/%s/operations", billUploadURL, billUploadID)
-		response = a.doPost(operationsURL, `{"operation":"commit"}`, authHeaders)
-		checkForError(response)
+		if err != nil {
+			err = a.AbortBillUploadProcess(billUploadID, authHeaders)
+		} else {
+			err = a.CommitBillUploadProcess(billUploadID, authHeaders)
+		}
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
 
-func (a *App) doPost(url, data string, headers map[string]string) *http.Response {
+func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string) (billUploadID string, err error) {
+	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
+
+	billUploadJSON, _ := json.Marshal(billUpload)
+	response, err := a.doPost(a.billUploadURL, string(billUploadJSON), authHeaders)
+	if err != nil {
+		return "", err
+	}
+
+	switch response.StatusCode {
+	case 429:
+		time.Sleep(120 * time.Second)
+		return a.StartBillUploadProcess(month, authHeaders)
+	case 409:
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return "", err
+		}
+		uuidMatch := uuidPattern.FindStringSubmatch(string(bodyBytes))
+		if len(uuidMatch) < 2 {
+			return "", fmt.Errorf("billUpload ID not found")
+		}
+		inProgressBillUploadID := uuidMatch[1]
+		err = a.AbortBillUploadProcess(inProgressBillUploadID, authHeaders)
+		if err != nil {
+			return "", err
+		}
+		return a.StartBillUploadProcess(month, authHeaders)
+	}
+
+	err = checkForError(response)
+	if err != nil {
+		return "", err
+	}
+
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var jsonResponse map[string]interface{}
+	if err = json.Unmarshal(bodyBytes, &jsonResponse); err != nil {
+		return "", err
+	}
+
+	return jsonResponse["id"].(string), nil
+}
+
+func (a *App) CommitBillUploadProcess(billUploadID string, headers map[string]string) error {
+	url := fmt.Sprintf("%s/%s/operations", a.billUploadURL, billUploadID)
+	response, err := a.doPost(url, `{"operation":"commit"}`, headers)
+	if err != nil {
+		return err
+	}
+	log.Println("commit upload bill process with id", billUploadID)
+
+	return checkForError(response)
+}
+
+func (a *App) AbortBillUploadProcess(billUploadID string, headers map[string]string) error {
+	url := fmt.Sprintf("%s/%s/operations", a.billUploadURL, billUploadID)
+	response, err := a.doPost(url, `{"operation":"abort"}`, headers)
+	if err != nil {
+		return err
+	}
+	log.Println("aborting upload bill process with id", billUploadID)
+
+	return checkForError(response)
+}
+
+func (a *App) UploadFile(billUploadID, fileName string, authHeaders map[string]string) error {
+	baseName := filepath.Base(fileName)
+	uploadFileURL := fmt.Sprintf("%s/%s/files/%s", a.billUploadURL, billUploadID, baseName)
+
+	fileData, err := os.ReadFile(fileName)
+	if err != nil {
+		return err
+	}
+
+	response, err := a.doPost(uploadFileURL, string(fileData), authHeaders)
+	if err != nil {
+		return err
+	}
+
+	err = checkForError(response)
+	if err != nil {
+		return err
+	}
+
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response: %s", err.Error())
+	}
+
+	defer response.Body.Close()
+	var uploadResponse OptimaFileUploadResponse
+	if err = json.Unmarshal(bodyBytes, &uploadResponse); err != nil {
+		return fmt.Errorf("error parsing response: %s", err.Error())
+	}
+
+	md5Hash := getMD5FromFileBytes(fileData)
+	if md5Hash != uploadResponse.MD5 {
+		return fmt.Errorf("MD5 of file %s does not match MD5 of uploaded file", fileName)
+	}
+
+	log.Printf("File %s uploaded and MD5 of file matches MD5 of uploaded file\n", fileName)
+	return nil
+}
+
+func (a *App) doPost(url, data string, headers map[string]string) (*http.Response, error) {
 	request, _ := http.NewRequest("POST", url, strings.NewReader(data))
 	log.Printf("Request: %+v\n", url)
 
@@ -351,11 +409,11 @@ func (a *App) doPost(url, data string, headers map[string]string) *http.Response
 
 	response, err := a.client.Do(request)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	log.Printf("Response Status Code: %+v\n", response.StatusCode)
-	return response
+	return response, nil
 }
 
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken.
@@ -480,6 +538,12 @@ func (a *App) DaysInMonth(month string) int {
 }
 
 func newApp() *App {
+	shardDict := map[string]string{
+		"NAM": "api.optima.flexeraeng.com",
+		"EU":  "api.optima-eu.flexeraeng.com",
+		"AU":  "api.optima-apac.flexeraeng.com",
+	}
+
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
 		filesToUpload:   make(map[string]map[string]struct{}),
@@ -489,6 +553,8 @@ func newApp() *App {
 	if err := env.Parse(&a.Config); err != nil {
 		log.Fatal(err)
 	}
+
+	a.billUploadURL = fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
 
 	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
 	if a.IncludePreviousMonth {
@@ -603,13 +669,15 @@ func (a *App) getCSVRows(currency string, month string, data []map[string]Kubeco
 	return rows
 }
 
-func checkForError(response *http.Response) {
+func checkForError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		if bodyBytes, err := io.ReadAll(response.Body); err == nil {
 			log.Println(string(bodyBytes))
 		}
-		log.Fatalf("Request failed with status code: %d", response.StatusCode)
+		log.Printf("Request failed with status code: %d \n", response.StatusCode)
+		return fmt.Errorf("request failed with status code: %d", response.StatusCode)
 	}
+	return nil
 }
 
 // dateIter is a generator function that yields a sequence of dates starting

@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.7.0](https://img.shields.io/badge/Version-1.7.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.7](https://img.shields.io/badge/AppVersion-1.7-informational?style=flat-square)
+![Version: 1.8.0](https://img.shields.io/badge/Version-1.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.8](https://img.shields.io/badge/AppVersion-1.8-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -94,7 +94,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.7"` |  |
+| image.tag | string | `"1.8"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Include data from previous month to the export process, only if we have files from every day of the previous month. |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
