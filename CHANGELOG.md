@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8
+
+- The bill upload process is aborted if an error occurs during the same process. If at the time the exporter wants to start the bill upload process there is another one in progress for the same organization and period, it is aborted and a new one is started.
+
 ## v1.7
 
 - The MD5 hash of the files is verified to ensure the integrity of the uploaded files.
