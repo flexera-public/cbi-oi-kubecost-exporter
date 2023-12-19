@@ -66,3 +66,9 @@ filePath: "/var/kubecost"
 # -- Include data from previous month to the export process, only if we have files from every day of the previous month.
 includePreviousMonth: false
 
+# -- Pod environment variables
+env: {}
+  # Example using envs to use proxy
+  # NO_PROXY: .svc,.cluster.local
+  # HTTP_PROXY: http://proxy.example.com:80
+  # HTTPS_PROXY: http://proxy.example.com:80
