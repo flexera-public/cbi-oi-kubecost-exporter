@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.8"
+  tag: "1.9"
 
 imagePullSecrets: []
 
@@ -65,6 +65,9 @@ filePath: "/var/kubecost"
 
 # -- Include data from previous month to the export process, only if we have files from every day of the previous month.
 includePreviousMonth: false
+
+# -- Timeout per each request in minutes
+requestTimeout: 5
 
 # -- Pod environment variables
 env: {}

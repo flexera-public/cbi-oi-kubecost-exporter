@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.8.0](https://img.shields.io/badge/Version-1.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.8](https://img.shields.io/badge/AppVersion-1.8-informational?style=flat-square)
+![Version: 1.9.0](https://img.shields.io/badge/Version-1.9.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.9](https://img.shields.io/badge/AppVersion-1.9-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -86,6 +86,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the right time |
+| env | object | `{}` | Pod environment variables |
 | filePath | string | `"/var/kubecost"` | Filepath to mount persistent volume |
 | fileRotation | bool | `true` | Delete files generated for the previous month (or the month before the previous month if INCLUDE_PREVIOUS_MONTH is set to true) |
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
@@ -94,7 +95,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.8"` |  |
+| image.tag | string | `"1.9"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Include data from previous month to the export process, only if we have files from every day of the previous month. |
 | kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
@@ -108,4 +109,5 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | kubecost.shareTenancyCosts | bool | `true` | Share the cost of cluster overhead assets such as cluster management costs |
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. If this setting is disabled, it may lead to inability to store history and data uploads older than 15 days in Flexera One |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size |
+| requestTimeout | int | `5` | Timeout per each request in minutes |
 

@@ -86,6 +86,7 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("FILE_ROTATION", "true")
 	os.Setenv("FILE_PATH", "/var/kubecost")
 	os.Setenv("KUBECOST_API_PATH", "/model/")
+	os.Setenv("REQUEST_TIMEOUT", "5")
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
@@ -103,6 +104,7 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("FILE_ROTATION")
 		os.Unsetenv("FILE_PATH")
 		os.Unsetenv("KUBECOST_API_PATH")
+		os.Unsetenv("REQUEST_TIMEOUT")
 	}()
 
 	a := newApp()
@@ -139,6 +141,7 @@ func Test_newApp(t *testing.T) {
 		FilePath:             "/var/kubecost",
 		KubecostAPIPath:      "/model/",
 		IncludePreviousMonth: false,
+		RequestTimeout:       5,
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)
