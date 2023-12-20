@@ -191,6 +191,7 @@ func (a *App) updateFromKubecost() {
 		q.Add("shareNamespaces", a.ShareNamespaces)
 		q.Add("shareSplit", "weighted")
 		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
+		q.Add("step", "1d")
 		req.URL.RawQuery = q.Encode()
 
 		resp, err := a.client.Do(req)

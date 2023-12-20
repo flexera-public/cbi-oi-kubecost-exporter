@@ -3,6 +3,7 @@
 ## v1.9
 
 - Added new env var REQUEST_TIMEOUT to manage the timeout of the requests. Default value is 5 minutes.
+- Added new query param 'step' set to '1d' to get daily data metrics from kubecost API.
 
 ## v1.8
 
