@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9
+
+- Added new env var REQUEST_TIMEOUT to manage the timeout of the requests. Default value is 5 minutes.
+- Added new query param 'step' set to '1d' to get daily data metrics from kubecost API.
+
 ## v1.8
 
 - The bill upload process is aborted if an error occurs during the same process. If at the time the exporter wants to start the bill upload process there is another one in progress for the same organization and period, it is aborted and a new one is started.

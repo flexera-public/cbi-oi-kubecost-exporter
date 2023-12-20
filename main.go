@@ -129,6 +129,7 @@ type (
 		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
 		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
 		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		RequestTimeout       int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
 	}
 
 	App struct {
@@ -190,6 +191,7 @@ func (a *App) updateFromKubecost() {
 		q.Add("shareNamespaces", a.ShareNamespaces)
 		q.Add("shareSplit", "weighted")
 		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
+		q.Add("step", "1d")
 		req.URL.RawQuery = q.Encode()
 
 		resp, err := a.client.Do(req)
@@ -547,13 +549,14 @@ func newApp() *App {
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
 		filesToUpload:   make(map[string]map[string]struct{}),
-		client:          &http.Client{Timeout: 5 * time.Minute},
+		client:          &http.Client{},
 		lastInvoiceDate: lastInvoiceDate,
 	}
 	if err := env.Parse(&a.Config); err != nil {
 		log.Fatal(err)
 	}
 
+	a.client.Timeout = time.Duration(a.RequestTimeout) * time.Minute
 	a.billUploadURL = fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
 
 	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}

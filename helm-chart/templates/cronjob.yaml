@@ -57,6 +57,12 @@ spec:
                 value: "{{ .Values.filePath }}"
               - name: INCLUDE_PREVIOUS_MONTH
                 value: "{{ .Values.includePreviousMonth }}"
+              - name: REQUEST_TIMEOUT
+                value: "{{ .Values.requestTimeout }}"
+              {{- range $key, $val := .Values.env }}
+              - name: {{ $key }}
+                value: {{ $val | quote }}
+              {{- end }}
             volumeMounts:
               - name: persistent-configs
                 mountPath: {{ .Values.filePath }}

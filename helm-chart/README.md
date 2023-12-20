@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.8.0](https://img.shields.io/badge/Version-1.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.8](https://img.shields.io/badge/AppVersion-1.8-informational?style=flat-square)
+![Version: 1.9.0](https://img.shields.io/badge/Version-1.9.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.9](https://img.shields.io/badge/AppVersion-1.9-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -85,27 +85,29 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the right time |
-| filePath | string | `"/var/kubecost"` | Filepath to mount persistent volume |
-| fileRotation | bool | `true` | Delete files generated for the previous month (or the month before the previous month if INCLUDE_PREVIOUS_MONTH is set to true) |
-| flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | Bill Connect ID |
-| flexera.orgId | string | `""` | Flexera Organization ID |
-| flexera.refreshToken | string | `""` | Refresh Token from FlexeraOne You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
-| flexera.shard | string | `"NAM"` | Shard ("NAM", "EU", "AU") |
+| cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
+| env | object | `{}` | Pod environment variables |
+| filePath | string | `"/var/kubecost"` | File path to mount persistent volume. |
+| fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept. |
+| flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |
+| flexera.orgId | string | `""` | The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation. |
+| flexera.refreshToken | string | `""` | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation. You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
+| flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.8"` |  |
+| image.tag | string | `"1.9"` |  |
 | imagePullSecrets | list | `[]` |  |
-| includePreviousMonth | bool | `false` | Include data from previous month to the export process, only if we have files from every day of the previous month. |
-| kubecost.aggregation | string | `"pod"` | Aggregation Level ("namespace", "controller", "pod") |
-| kubecost.apiPath | string | `"/model/"` | Base path for the Kubecost API endpoints |
+| includePreviousMonth | bool | `false` | Indicates whether to collect and export previous month. |
+| kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod. |
+| kubecost.apiPath | string | `"/model/"` | The base path for the Kubecost API endpoint. |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
-| kubecost.idle | bool | `true` | Include cost of idle resources |
-| kubecost.idleByNode | bool | `false` | Idle allocations are created on a per node basis |
-| kubecost.multiplier | float | `1` | Cost multiplier |
-| kubecost.shareIdle | bool | `false` | Allocate idle cost proportionally |
-| kubecost.shareNamespaces | string | `"kube-system,cadvisor"` | Comma-separated list of namespaces to share costs |
-| kubecost.shareTenancyCosts | bool | `true` | Share the cost of cluster overhead assets such as cluster management costs |
-| persistentVolume.enabled | bool | `true` | Enable Persistent Volume. If this setting is disabled, it may lead to inability to store history and data uploads older than 15 days in Flexera One |
-| persistentVolume.size | string | `"1Gi"` | Persistent Volume size |
+| kubecost.idle | bool | `true` | Indicates whether to include cost of idle resources. |
+| kubecost.idleByNode | bool | `false` | Indicates whether idle allocations are created on a per node basis. |
+| kubecost.multiplier | float | `1` | Optional multiplier for costs. |
+| kubecost.shareIdle | bool | `false` | Indicates whether allocate idle cost proportionally across non-idle resources. |
+| kubecost.shareNamespaces | string | `"kube-system,cadvisor"` | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. |
+| kubecost.shareTenancyCosts | bool | `true` | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. |
+| persistentVolume.enabled | bool | `true` | Enable Persistent Volume. Recommended setting is true to prevent loss of historical data. |
+| persistentVolume.size | string | `"1Gi"` | Persistent Volume size. |
+| requestTimeout | int | `5` | Indicates the timeout per each request in minutes. |
 
