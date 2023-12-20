@@ -10,16 +10,16 @@ image:
 imagePullSecrets: []
 
 persistentVolume:
-  # -- Persistent Volume size
+  # -- Persistent Volume size.
   size: 1Gi
-  # -- Enable Persistent Volume. If this setting is disabled, it may lead to inability to store history and data uploads older than 15 days in Flexera One
+  # -- Enable Persistent Volume. Recommended setting is true to prevent loss of historical data.
   enabled: true
 
-# -- Setting up a cronJob scheduler to run an export task at the right time
+# -- Setting up a cronJob scheduler to run an export task at the desired time.
 cronSchedule: "0 */6 * * *" # every 6 hours
 
 flexera:
-  # -- Refresh Token from FlexeraOne
+  # -- The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation.
   # You can provide the refresh token in two ways:
   # 1. Directly as a string:
   #    refreshToken: "your_token_here"
@@ -30,43 +30,43 @@ flexera:
   #          name: flexera-secrets  # Name of the Kubernetes secret
   #          key: refresh_token     # Key in the secret containing the refresh token
   refreshToken: ""
-  # -- Flexera Organization ID
+  # -- The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation.
   orgId: ""
-  # -- Bill Connect ID
+  # -- The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation.
   billConnectId: "cbi-oi-kubecost-1"
-  # -- Shard ("NAM", "EU", "AU")
+  # -- The zone of your Flexera One account. Valid values are NAM, EU or AU.
   shard: "NAM"
 
 kubecost:
   # -- Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local
   host: "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"
-  # -- Base path for the Kubecost API endpoints
+  # -- The base path for the Kubecost API endpoint.
   apiPath: "/model/"
-  # -- Aggregation Level ("namespace", "controller", "pod")
+  # -- The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod.
   aggregation: "pod"
-  # -- Comma-separated list of namespaces to share costs
+  # -- Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations.
   shareNamespaces: "kube-system,cadvisor"
-  # -- Include cost of idle resources
+  # -- Indicates whether to include cost of idle resources.
   idle: true
-  # -- Idle allocations are created on a per node basis
+  # -- Indicates whether idle allocations are created on a per node basis.
   idleByNode: false
-  # -- Allocate idle cost proportionally
+  # -- Indicates whether allocate idle cost proportionally across non-idle resources.
   shareIdle: false
-  # -- Share the cost of cluster overhead assets such as cluster management costs
+  # -- Indicates whether to share the cost of cluster overhead assets across tenants of those resources.
   shareTenancyCosts: true
-  # -- Cost multiplier
+  # -- Optional multiplier for costs.
   multiplier: 1.0
 
-# -- Delete files generated for the previous month (or the month before the previous month if INCLUDE_PREVIOUS_MONTH is set to true)
+# -- Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept.
 fileRotation: true
 
-# -- Filepath to mount persistent volume
+# -- File path to mount persistent volume.
 filePath: "/var/kubecost"
 
-# -- Include data from previous month to the export process, only if we have files from every day of the previous month.
+# -- Indicates whether to collect and export previous month.
 includePreviousMonth: false
 
-# -- Timeout per each request in minutes
+# -- Indicates the timeout per each request in minutes.
 requestTimeout: 5
 
 # -- Pod environment variables
