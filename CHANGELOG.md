@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.9.1
+
+- Addressed an issue with Kubecost where it returns "empty" data for selected date ranges. Also ensured that no data is written to files in cases where the data is empty.
+
 ## v1.9
 
 - Added new env var REQUEST_TIMEOUT to manage the timeout of the requests. Default value is 5 minutes.

@@ -217,9 +217,18 @@ func (a *App) updateFromKubecost() {
 		}
 
 		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
-		_, previousFileCreated := a.filesToUpload[monthOfData][csvFile]
-		if len(data) == 0 && previousFileCreated {
-			log.Printf("File %s has already been created and kubecost no longer has data for this same date range, skipping \n", csvFile)
+		dataExist := false
+		for _, allocation := range j.Data {
+			if len(allocation) > 0 {
+				dataExist = true
+			}
+		}
+
+		if dataExist == false {
+			log.Printf(
+				"Kubecost doesn't have data for date range %s to %s, skipping\n",
+				d.Format("2006-01-02T15:04:05Z"),
+				tomorrow.Format("2006-01-02T15:04:05Z"))
 			continue
 		}
 
