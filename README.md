@@ -9,7 +9,7 @@ The application can be installed from golang sources, from a docker image or via
 
 ### Go sources
 
-This app requires Go version 1.16 or higher. To install, run:
+This app requires Go version 1.21 or higher. To install, run:
 
 ```bash
 go install github.com/flexera-public/cbi-oi-kubecost-exporter
