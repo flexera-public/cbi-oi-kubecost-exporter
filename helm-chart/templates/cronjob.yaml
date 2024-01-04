@@ -27,6 +27,18 @@ spec:
               {{- else }}
                 {{- toYaml .Values.flexera.refreshToken | nindent 16 }}
               {{- end }}
+               - name: SERVICE_APP_CLIENT_ID
+              {{- if eq (typeOf .Values.flexera.serviceAppClientId) "string" }}
+                value: "{{ .Values.flexera.serviceAppClientId }}"
+              {{- else }}
+                {{- toYaml .Values.flexera.serviceAppClientId | nindent 16 }}
+              {{- end }}
+               - name: SERVICE_APP_CLIENT_SECRET
+              {{- if eq (typeOf .Values.flexera.serviceAppClientSecret) "string" }}
+                value: "{{ .Values.flexera.serviceAppClientSecret }}"
+              {{- else }}
+                {{- toYaml .Values.flexera.serviceAppClientSecret | nindent 16 }}
+              {{- end }}
               - name: ORG_ID
                 value: "{{ .Values.flexera.orgId }}"
               - name: BILL_CONNECT_ID

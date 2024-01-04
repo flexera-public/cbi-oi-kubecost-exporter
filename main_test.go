@@ -72,6 +72,8 @@ func Test_extractLabels(t *testing.T) {
 
 func Test_newApp(t *testing.T) {
 	os.Setenv("REFRESH_TOKEN", "test_refresh_token")
+	os.Setenv("SERVICE_APP_CLIENT_ID", "test_service_client_id")
+	os.Setenv("SERVICE_APP_CLIENT_SECRET", "test_service_client_secret")
 	os.Setenv("ORG_ID", "test_org_id")
 	os.Setenv("BILL_CONNECT_ID", "test_bill_connect_id")
 	os.Setenv("SHARD", "NAM")
@@ -90,6 +92,8 @@ func Test_newApp(t *testing.T) {
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
+		os.Unsetenv("SERVICE_APP_CLIENT_ID")
+		os.Unsetenv("SERVICE_APP_CLIENT_SECRET")
 		os.Unsetenv("ORG_ID")
 		os.Unsetenv("BILL_CONNECT_ID")
 		os.Unsetenv("SHARD")
@@ -126,6 +130,8 @@ func Test_newApp(t *testing.T) {
 
 	expectedConfig := Config{
 		RefreshToken:         "test_refresh_token",
+		ServiceClientId:      "test_service_client_id",
+		ServiceClientSecret:  "test_service_client_secret",
 		OrgID:                "test_org_id",
 		BillConnectID:        "test_bill_connect_id",
 		Shard:                "NAM",

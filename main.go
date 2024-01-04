@@ -114,6 +114,8 @@ type (
 
 	Config struct {
 		RefreshToken         string  `env:"REFRESH_TOKEN"`
+		ServiceClientId      string  `env:"SERVICE_APP_CLIENT_ID"`
+		ServiceClientSecret  string  `env:"SERVICE_APP_CLIENT_SECRET"`
 		OrgID                string  `env:"ORG_ID"`
 		BillConnectID        string  `env:"BILL_CONNECT_ID"`
 		Shard                string  `env:"SHARD" envDefault:"NAM"`
@@ -427,7 +429,7 @@ func (a *App) doPost(url, data string, headers map[string]string) (*http.Respons
 	return response, nil
 }
 
-// generateAccessToken returns an access token from the Flexera One API using a given refreshToken.
+// generateAccessToken returns an access token from the Flexera One API using a given refreshToken or service account.
 func (a *App) generateAccessToken() (string, error) {
 	domainsDict := map[string]string{
 		"NAM": "flexera.com",
@@ -436,8 +438,14 @@ func (a *App) generateAccessToken() (string, error) {
 	}
 	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[a.Shard])
 	reqBody := url.Values{}
-	reqBody.Set("grant_type", "refresh_token")
-	reqBody.Set("refresh_token", a.RefreshToken)
+	if len(a.RefreshToken) > 0 {
+		reqBody.Set("grant_type", "refresh_token")
+		reqBody.Set("refresh_token", a.RefreshToken)
+	} else {
+		reqBody.Set("grant_type", "client_credentials")
+		reqBody.Set("client_id", a.ServiceClientId)
+		reqBody.Set("client_secret", a.ServiceClientSecret)
+	}
 
 	req, err := http.NewRequest("POST", accessTokenUrl, strings.NewReader(reqBody.Encode()))
 	if err != nil {
