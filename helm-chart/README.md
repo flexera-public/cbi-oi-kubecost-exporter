@@ -86,7 +86,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
-| env | object | `{}` | Pod environment variables |
+| env | object | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
 | filePath | string | `"/var/kubecost"` | File path to mount persistent volume. |
 | fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept. |
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |

@@ -73,10 +73,7 @@ includePreviousMonth: false
 # -- Indicates the timeout per each request in minutes.
 requestTimeout: 5
 
-# -- Pod environment variables
-env:
-  {}
-  # Example using envs to use proxy
-  # NO_PROXY: .svc,.cluster.local
-  # HTTP_PROXY: http://proxy.example.com:80
-  # HTTPS_PROXY: http://proxy.example.com:80
+# -- Pod environment variables.
+# Example using envs to use proxy:
+# {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"}
+env: {}

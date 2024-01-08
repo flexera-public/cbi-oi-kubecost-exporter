@@ -1,7 +1,6 @@
 # Kubecost exporter for Flexera CCO
 
-Kubecost Flexera Exporter is a utility to collect cost allocation data. It is a command line tool that automates the transfer of Kubernetes cluster cost allocation data to Cloud Cost Optimization. This tool generates a CSV file for each day of the current (and optionally previous) month in a format compatible with the Flexera One platform and then uploads files into Cloud Cost Optimization via CBI connect.
-Kubecost Flexera Exporter utilizes Kubecost Allocation API to request cost allocation data. The majority of Kubecost Allocation API parameters are exposed as exporter settings, matching Kubecost API parameters are listed in the exporter setting descriptions.
+Kubecost Flexera Exporter is a utility to collect cost allocation data. It is a command line tool that automates the transfer of Kubernetes cluster cost allocation data to Cloud Cost Optimization. This tool generates a CSV file for each day of the current (and optionally previous) month in a format compatible with the Flexera One platform and then uploads files into Cloud Cost Optimization via CBI connect. Kubecost Flexera Exporter utilizes Kubecost Allocation API to request cost allocation data. The majority of Kubecost Allocation API parameters are exposed as exporter settings, matching Kubecost API parameters are listed in the exporter setting descriptions.
 
 ## Installation
 
@@ -71,12 +70,12 @@ helm install kubecost-exporter cbi-oi-kubecost-exporter \
 
 ```yml
 flexera:
-    refreshToken: "Ek-aGVsbUBrdWJlY29zdC5jb20..."
-    orgId: "1105"
-    billConnectId: "cbi-oi-kubecost-..."
+    refreshToken: 'Ek-aGVsbUBrdWJlY29zdC5jb20...'
+    orgId: '1105'
+    billConnectId: 'cbi-oi-kubecost-...'
 
 kubecost:
-    aggregation: "pod"
+    aggregation: 'pod'
 ```
 
 2.2 Apply this file when installing kubecost-exporter:
@@ -131,9 +130,9 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 ### Helm configuration Values
 
 | Key | Type | Kubecost API Parameter | Default | Description |
-|-----|------|---------|----------|-------------|
+| --- | --- | --- | --- | --- |
 | cronSchedule | string | - | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
-| env | object | - | `{}` | Pod environment variables |
+| env | object | - | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
 | filePath | string | - | `"/var/kubecost"` | File path to mount persistent volume. |
 | fileRotation | bool | - | `true` | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept. |
 | flexera.billConnectId | string | - | `"cbi-oi-kubecost-1"` | The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |
