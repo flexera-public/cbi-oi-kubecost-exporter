@@ -23,8 +23,7 @@ func Test_dateIter(t *testing.T) {
 
 func Test_extractLabels(t *testing.T) {
 	type args struct {
-		labels          map[string]string
-		namespaceLabels map[string]string
+		properties Properties
 	}
 	tests := []struct {
 		name           string
@@ -34,25 +33,46 @@ func Test_extractLabels(t *testing.T) {
 		{
 			name: "success: with labels and namespace labels",
 			args: args{
-				labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
-				namespaceLabels: map[string]string{"label3": "us-weast-1a"},
+				properties: Properties{
+					Labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+					NamespaceLabels: map[string]string{"label3": "us-weast-1a"},
+				},
 			},
 			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
 		},
 		{
 			name: "success: only with labels",
 			args: args{
-				labels: map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+				properties: Properties{
+					Labels: map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+				},
 			},
 			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\"}",
 		},
 		{
 			name: "success: with labels and some namespace labels repeated",
 			args: args{
-				labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
-				namespaceLabels: map[string]string{"label1": "us-east-1a", "label3": "us-weast-1a"},
+				properties: Properties{
+					Labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+					NamespaceLabels: map[string]string{"label1": "us-east-1a", "label3": "us-weast-1a"},
+				},
 			},
 			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
+		},
+		{
+			name: "success: with labels and some namespace labels repeated and container, controller, pod and providerID",
+			args: args{
+				properties: Properties{
+					Labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+					NamespaceLabels: map[string]string{"label1": "us-east-1a", "label3": "us-weast-1a"},
+					Container:       "container-123",
+					Controller:      "aws-controller",
+					Node:            "aws-node",
+					Pod:             "aws-pod",
+					ProviderID:      "i-090512345ae4d14ed",
+				},
+			},
+			expextedLabels: "{\"kc-container\":\"container-123\",\"kc-controller\":\"aws-controller\",\"kc-node\":\"aws-node\",\"kc-pod-id\":\"aws-pod\",\"kc-provider-id\":\"i-090512345ae4d14ed\",\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
 		},
 		{
 			name:           "success: without labels or namespace labels",
@@ -62,7 +82,7 @@ func Test_extractLabels(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractLabels(tt.args.labels, tt.args.namespaceLabels)
+			got := extractLabels(tt.args.properties)
 			if !reflect.DeepEqual(got, tt.expextedLabels) {
 				t.Errorf("extractLabels() got = %v, want %v", got, tt.expextedLabels)
 			}
@@ -292,42 +312,42 @@ func TestApp_getCSVRows(t *testing.T) {
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.07", "USD", "pod", "cpuCost", "0.14", "cpuCoreHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "gpuCost", "0.00", "gpuHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.17", "USD", "pod", "ramCost", "4053048627.20", "ramByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "pvCost", "0.00", "pvByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "networkCost", "230280247.65", "networkTransferBytes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "sharedCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "externalCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "loadBalancerCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\"}",
+			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 
 	tests := []struct {
