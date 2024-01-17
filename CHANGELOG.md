@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.11
+
+-   Added labels "kc-container" for container, "kc-controller" for controller, "kc-node" for node, "kc-pod-id" for pod and "kc-provider-id" for providerID to the exported field "labels" in the CSV file.
+
 ## v1.10
 
 -   Added Flexera Service Accounts support (SERVICE_APP_CLIENT_ID and SERVICE_APP_CLIENT_SECRET env variables)

@@ -639,7 +639,7 @@ func (a *App) getCSVRows(currency string, month string, data []map[string]Kubeco
 	for _, allocation := range data {
 		for id, v := range allocation {
 			mapDatesGotten[v.Start] = v.End
-			labels := extractLabels(v.Properties.Labels, v.Properties.NamespaceLabels)
+			labels := extractLabels(v.Properties)
 			types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
 			vals := []float64{
 				v.CPUCost + v.CPUCostAdjustment,
@@ -716,15 +716,32 @@ func dateIter(startDate time.Time) <-chan time.Time {
 	return c
 }
 
-func extractLabels(labels map[string]string, namespaceLabels map[string]string) string {
+// extractLabels returns a JSON string with all the properties labels, merging labels and namespace labels
+// and adding labels for the container, controller, pod and provider.
+func extractLabels(properties Properties) string {
 	mapLabels := make(map[string]string)
-	if labels != nil {
-		mapLabels = labels
+	if properties.Labels != nil {
+		mapLabels = properties.Labels
 	}
-	if namespaceLabels != nil {
-		for k, v := range namespaceLabels {
+	if properties.NamespaceLabels != nil {
+		for k, v := range properties.NamespaceLabels {
 			mapLabels[k] = v
 		}
+	}
+	if properties.Container != "" {
+		mapLabels["kc-container"] = properties.Container
+	}
+	if properties.Controller != "" {
+		mapLabels["kc-controller"] = properties.Controller
+	}
+	if properties.Node != "" {
+		mapLabels["kc-node"] = properties.Node
+	}
+	if properties.Pod != "" {
+		mapLabels["kc-pod-id"] = properties.Pod
+	}
+	if properties.ProviderID != "" {
+		mapLabels["kc-provider-id"] = properties.ProviderID
 	}
 
 	labelsJSON, _ := json.Marshal(mapLabels)
