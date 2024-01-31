@@ -18,6 +18,9 @@ persistentVolume:
 # -- Setting up a cronJob scheduler to run an export task at the desired time.
 cronSchedule: "0 */6 * * *" # every 6 hours
 
+# -- The maximum duration in seconds for the cron job to complete
+activeDeadlineSeconds: 10800 # 3 hour
+
 flexera:
   # -- The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation.
   # You can provide the refresh token in two ways:

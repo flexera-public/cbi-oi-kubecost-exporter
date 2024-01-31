@@ -9,7 +9,7 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 3
-      activeDeadlineSeconds: 100
+      activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds | default 100 }}
       template:
         spec:
           containers:
