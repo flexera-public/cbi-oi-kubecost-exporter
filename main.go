@@ -149,6 +149,7 @@ type (
 )
 
 var uuidPattern = regexp.MustCompile(`an existing billUpload \(ID: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`)
+var fileNameRe = regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.csv(\.gz)?`)
 
 func main() {
 	exporter := newApp()
@@ -289,6 +290,7 @@ func (a *App) closeAndSaveFile(writer *csv.Writer, zipWriter *gzip.Writer, b *by
 			log.Printf("error removing file %s: %v", csvFilename, err)
 		}
 	}
+	delete(a.filesToUpload[monthOfData], csvFilename)
 }
 
 func (a *App) uploadToFlexera() {
@@ -522,11 +524,9 @@ func (a *App) updateFileList() {
 		log.Fatal(err)
 	}
 
-	re := regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})-\d+\.csv\.gz`)
-
 	for _, file := range files {
 		if file.Type().IsRegular() {
-			matches := re.FindStringSubmatch(file.Name())
+			matches := fileNameRe.FindStringSubmatch(file.Name())
 			if matches != nil {
 				if t, err := time.Parse("2006-01-02", matches[1]); err == nil {
 					if a.dateInInvoiceRange(t) {
