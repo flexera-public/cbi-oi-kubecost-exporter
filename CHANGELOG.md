@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.12.0
+
+-   Implemented compression and chunking for large CSV files to improve file upload reliability and performance with Flexera CBI.
+
 ## v1.11.1
 
 -   Enhanced Helm chart to dynamically configure `activeDeadlineSeconds` through `values.yaml`, providing greater flexibility for cron job execution duration.

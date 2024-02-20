@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"encoding/csv"
 	"encoding/hex"
@@ -132,6 +133,7 @@ type (
 		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
 		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 		RequestTimeout       int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
+		MaxFileRows          int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
 	}
 
 	App struct {
@@ -211,7 +213,7 @@ func (a *App) updateFromKubecost() {
 
 		data := j.Data
 		monthOfData := d.Format("2006-01")
-		var csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv"), d.Format("2006-01-02"))
+		var csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv.gz"), d.Format("2006-01-02"))
 
 		if j.Code != http.StatusOK {
 			log.Println("Kubecost API response code different than 200, skipping")
@@ -234,8 +236,12 @@ func (a *App) updateFromKubecost() {
 			continue
 		}
 
+		var fileIndex int = 1
+		var rowCount int = 0
+
 		b := new(bytes.Buffer)
-		writer := csv.NewWriter(b)
+		zipWriter := gzip.NewWriter(b)
+		writer := csv.NewWriter(zipWriter)
 
 		writer.Write(a.getCSVHeaders())
 
@@ -243,17 +249,45 @@ func (a *App) updateFromKubecost() {
 		log.Printf("Requested date range, from %s to %s \n", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z"))
 
 		for _, row := range a.getCSVRows(currency, monthOfData, data) {
-			writer.Write(row)
-		}
-		writer.Flush()
+			if rowCount >= a.MaxFileRows {
+				a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
 
-		a.filesToUpload[monthOfData][csvFile] = struct{}{}
-		err = os.WriteFile(csvFile, b.Bytes(), 0644)
-		if err != nil {
-			log.Fatal(err)
+				fileIndex++
+				csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v_%d.csv.gz"), d.Format("2006-01-02"), fileIndex)
+				b = new(bytes.Buffer)
+				zipWriter = gzip.NewWriter(b)
+				writer = csv.NewWriter(zipWriter)
+
+				writer.Write(a.getCSVHeaders())
+				rowCount = 1
+			}
+
+			writer.Write(row)
+			rowCount++
 		}
-		log.Println("Retrieved", csvFile)
-		b.Reset()
+		a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
+	}
+}
+
+func (a *App) closeAndSaveFile(writer *csv.Writer, zipWriter *gzip.Writer, b *bytes.Buffer, monthOfData, csvFile string) {
+	writer.Flush()
+	zipWriter.Flush()
+	zipWriter.Close()
+
+	a.filesToUpload[monthOfData][csvFile] = struct{}{}
+	err := os.WriteFile(csvFile, b.Bytes(), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Retrieved", csvFile)
+	b.Reset()
+
+	// Delete the .csv file if it exists
+	csvFilename := strings.TrimSuffix(csvFile, ".gz")
+	if _, err := os.Stat(csvFilename); err == nil {
+		if err := os.Remove(csvFilename); err != nil {
+			log.Printf("error removing file %s: %v", csvFilename, err)
+		}
 	}
 }
 
@@ -488,14 +522,19 @@ func (a *App) updateFileList() {
 		log.Fatal(err)
 	}
 
+	re := regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})-\d+\.csv\.gz`)
+
 	for _, file := range files {
 		if file.Type().IsRegular() {
-			if t, err := time.Parse("kubecost-2006-01-02.csv", file.Name()); err == nil {
-				if a.dateInInvoiceRange(t) {
-					a.filesToUpload[t.Format("2006-01")][path.Join(a.FilePath, file.Name())] = struct{}{}
-				} else if a.FileRotation && !a.dateInMandatoryFileSavingPeriod(t) {
-					if err = os.Remove(path.Join(a.FilePath, file.Name())); err != nil {
-						log.Printf("error removing file %s: %v", file.Name(), err)
+			matches := re.FindStringSubmatch(file.Name())
+			if matches != nil {
+				if t, err := time.Parse("2006-01-02", matches[1]); err == nil {
+					if a.dateInInvoiceRange(t) {
+						a.filesToUpload[t.Format("2006-01")][path.Join(a.FilePath, file.Name())] = struct{}{}
+					} else if a.FileRotation && !a.dateInMandatoryFileSavingPeriod(t) {
+						if err = os.Remove(path.Join(a.FilePath, file.Name())); err != nil {
+							log.Printf("error removing file %s: %v", file.Name(), err)
+						}
 					}
 				}
 			}
