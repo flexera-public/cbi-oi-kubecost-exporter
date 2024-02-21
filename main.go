@@ -254,7 +254,7 @@ func (a *App) updateFromKubecost() {
 				a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
 
 				fileIndex++
-				csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v_%d.csv.gz"), d.Format("2006-01-02"), fileIndex)
+				csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v-%d.csv.gz"), d.Format("2006-01-02"), fileIndex)
 				b = new(bytes.Buffer)
 				zipWriter = gzip.NewWriter(b)
 				writer = csv.NewWriter(zipWriter)
@@ -270,27 +270,30 @@ func (a *App) updateFromKubecost() {
 	}
 }
 
-func (a *App) closeAndSaveFile(writer *csv.Writer, zipWriter *gzip.Writer, b *bytes.Buffer, monthOfData, csvFile string) {
+func (a *App) closeAndSaveFile(writer *csv.Writer, zipWriter *gzip.Writer, b *bytes.Buffer, monthOfData, csvGzFile string) {
 	writer.Flush()
 	zipWriter.Flush()
 	zipWriter.Close()
 
-	a.filesToUpload[monthOfData][csvFile] = struct{}{}
-	err := os.WriteFile(csvFile, b.Bytes(), 0644)
+	a.filesToUpload[monthOfData][csvGzFile] = struct{}{}
+	err := os.WriteFile(csvGzFile, b.Bytes(), 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Retrieved", csvFile)
+	log.Println("Retrieved", csvGzFile)
 	b.Reset()
 
-	// Delete the .csv file if it exists
-	csvFilename := strings.TrimSuffix(csvFile, ".gz")
-	if _, err := os.Stat(csvFilename); err == nil {
-		if err := os.Remove(csvFilename); err != nil {
-			log.Printf("error removing file %s: %v", csvFilename, err)
+	// delete previous files for this day, except for the current one, in case there are fewer files than on the disk
+	matches := fileNameRe.FindStringSubmatch(csvGzFile)
+	if len(matches) >= 3 && len(matches[2]) == 0 { // filename without index
+		currentDate := matches[1]
+		for filename := range a.filesToUpload[monthOfData] {
+			if strings.Contains(filename, currentDate) && filename != csvGzFile {
+				_ = os.Remove(filename)
+				delete(a.filesToUpload[monthOfData], filename)
+			}
 		}
 	}
-	delete(a.filesToUpload[monthOfData], csvFilename)
 }
 
 func (a *App) uploadToFlexera() {
