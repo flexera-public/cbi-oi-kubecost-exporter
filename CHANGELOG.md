@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.0
+
+-   Fixed crash on getConfigs request for OpenCost
+
 ## v1.12.0
 
 -   Implemented compression and chunking for large CSV files to improve file upload reliability and performance with Flexera CBI.

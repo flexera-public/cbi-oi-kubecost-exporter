@@ -556,7 +556,7 @@ func (a *App) getCurrency() (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)
+		return "USD", nil
 	}
 
 	var config KubecostConfig
