@@ -4,7 +4,7 @@ Kubecost Flexera Exporter is a utility to collect cost allocation data. It is a 
 
 ## OpenCost Support
 
-The Kubecost Flexera Exporter now also supports the OpenCost API, which is largely compatible with the Kubecost Allocation API. This means you can easily switch between Kubecost and OpenCost for retrieving Kubernetes cost allocation data, depending on your preference or requirements.
+The Kubecost Flexera Exporter now also supports the [OpenCost API](https://www.opencost.io/docs/integrations/api), which is largely compatible with the [Kubecost Allocation API](https://docs.kubecost.com/apis/apis-overview/api-allocation). This means you can easily switch between Kubecost and OpenCost for retrieving Kubernetes cost allocation data, depending on your preference or requirements.
 
 ### Key Differences
 
