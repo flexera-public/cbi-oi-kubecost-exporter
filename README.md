@@ -16,7 +16,7 @@ While [OpenCost Allocation API](https://www.opencost.io/docs/integrations/api#al
     -   `shareNamespaces`
     -   `shareTenancyCosts`
 
-These parameters are specific to Kubecost's approach to handling idle costs, shared namespace costs, and tenancy costs allocation. If your use case relies on these features, you might need to adjust your cost analysis strategy when using OpenCost.
+These parameters are specific to Kubecost's approach to handling idle costs, shared namespace costs, and tenancy costs allocation. If your use case relies on these features, you might need to adjust your cost analysis strategy when using OpenCost. More information can be found in the [comparison table](#kubecostopencost-integration-configuration).
 
 -   **Default Values for Certain Parameters:** When using OpenCost, specific parameters have different default values compared to using other solutions. Notably:
     -   `host` should be set to `opencost.opencost.svc.cluster.local:9003`
