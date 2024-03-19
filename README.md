@@ -8,7 +8,7 @@ The Kubecost Flexera Exporter now also supports the [OpenCost API](https://www.o
 
 ### Key Differences
 
-While [OpenCost Allocation API](https://www.opencost.io/docs/integrations/api#allocation-api) mirrors that of Kubecost's for the most part, there are a few key differences to be aware of:
+While [OpenCost Allocation API](https://www.opencost.io/docs/integrations/api#allocation-api) mirrors that of Kubecost's for the most part, however, there are a few key differences to be aware of:
 
 -   **Unsupported Parameters**: OpenCost does not support the following parameters:
     -   `idleByNode`
@@ -18,7 +18,7 @@ While [OpenCost Allocation API](https://www.opencost.io/docs/integrations/api#al
 
 These parameters are specific to Kubecost's approach to handling idle costs, shared namespace costs, and tenancy costs allocation. If your use case relies on these features, you might need to adjust your cost analysis strategy when using OpenCost. More information can be found in the [comparison table](#kubecostopencost-integration-configuration).
 
--   **Default Values for Certain Parameters:** When using OpenCost, specific parameters have different default values compared to using other solutions. Notably:
+-   **Default Values for Certain Parameters:** When using OpenCost, it's noteworthy that certain parameters have default values distinct from used in Kubecost. Specifically:
     -   `host` should be set to `opencost.opencost.svc.cluster.local:9003`
     -   `apiPath` should default to `/`
 
@@ -184,7 +184,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 
 ## Kubecost/Opencost Integration Configuration
 
-The following are the parameters used in the Helm configuration and the environment variables that are directly used for API requests.
+Below are the parameters used in the Helm configuration along with the environment variables that are directly employed for API requests.
 
 | Helm Value | Environment Variable | Kubecost API Parameter | OpenCost API Parameter | Description |
 | --- | --- | --- | --- | --- |
