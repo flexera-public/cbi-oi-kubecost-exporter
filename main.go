@@ -191,6 +191,7 @@ func (a *App) updateFromKubecost() {
 		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
 		q.Add("aggregate", a.aggregation)
 		q.Add("idle", fmt.Sprintf("%t", a.Idle))
+		q.Add("includeIdle", fmt.Sprintf("%t", a.Idle))
 		q.Add("idleByNode", fmt.Sprintf("%t", a.IdleByNode))
 		q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
 		q.Add("shareNamespaces", a.ShareNamespaces)

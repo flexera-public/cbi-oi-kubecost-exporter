@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.14.0
+
+-   Improved OpenCost support. Added description of settings for integration with OpenCost in README.md
+
 ## v1.13.0
 
 -   Fixed crash on getConfigs request for OpenCost
