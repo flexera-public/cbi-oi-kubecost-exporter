@@ -2,6 +2,14 @@
 
 Kubecost Flexera Exporter is a utility to collect cost allocation data. It is a command line tool that automates the transfer of Kubernetes cluster cost allocation data to Cloud Cost Optimization. This tool generates a CSV file for each day of the current (and optionally previous) month in a format compatible with the Flexera One platform and then uploads files into Cloud Cost Optimization via CBI connect. Kubecost Flexera Exporter utilizes Kubecost Allocation API to request cost allocation data. The majority of Kubecost Allocation API parameters are exposed as exporter settings, matching Kubecost API parameters are listed in the exporter setting descriptions.
 
+## Supported Kubecost Allocation API Versions
+
+This exporter is able to work with 1.x, 2.3 or higher versions.
+
+With versions from 2.0 to 2.2.x there could be some unexpected results when using the Allocation API, especially using the shareIdle parameter which in those versions is not correctly implemented. That is why it is not recommended to use any of these versions.
+
+NOTE: For versions 2.3 and higher, the properties received from the Kubecost Allocation API depend on the level of aggregation being used, smaller levels of granularity will include higher levels but not vice versa. For instance if you set aggregation as pod, exporter will include data for cluster, namespace, controller, controllerKind, node and pod but if you set aggregation as namespace, exporter won't include data for controller, controllerKind, node and pod.
+
 ## OpenCost Support
 
 The Kubecost Flexera Exporter now also supports the [OpenCost API](https://www.opencost.io/docs/integrations/api), which is largely compatible with the [Kubecost Allocation API](https://docs.kubecost.com/apis/apis-overview/api-allocation). This means you can easily switch between Kubecost and OpenCost for retrieving Kubernetes cost allocation data, depending on your preference or requirements.
@@ -40,27 +48,27 @@ go install github.com/flexera-public/cbi-oi-kubecost-exporter
 
 The app is configured using environment variables defined in a .env file. The following configuration options are available:
 
-| Environment Variable | Description |
-| --- | --- |
-| FILE_PATH | The path where the generated CSV files are stored. Default is "/var/kubecost" |
-| FILE_ROTATION | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept. |
-| BILL_CONNECT_ID | The ID of the bill connect to which to upload the data. Default value is "cbi-oi-kubecost-1". To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |
-| ORG_ID | The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation. |
-| REFRESH_TOKEN | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation. |
+| Environment Variable | Description                                                                                                                                                                                                                                                                                                                            |
+| --- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| FILE_PATH | The path where the generated CSV files are stored. Default is "/var/kubecost"                                                                                                                                                                                                                                                          |
+| FILE_ROTATION | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept.                                                                                                                                                                                                      |
+| BILL_CONNECT_ID | The ID of the bill connect to which to upload the data. Default value is "cbi-oi-kubecost-1". To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation.   |
+| ORG_ID | The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation.                                                                                                        |
+| REFRESH_TOKEN | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation.                                                                                                          |
 | SERVICE_APP_CLIENT_ID | The service account client ID used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with REFRESH_TOKEN, use only one of them. |
-| SERVICE_APP_CLIENT_SECRET | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. |
-| SHARD | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
-| INCLUDE_PREVIOUS_MONTH | Indicates whether to collect and export previous month. Default is false. This parameter is incompatible with REFRESH_TOKEN, use only one of them. |
-| REQUEST_TIMEOUT | Indicates the timeout per each request in minutes. |
-| KUBECOST_HOST | The hostname of the Kubecost instance. Default is "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090". |
-| KUBECOST_API_PATH | The base path for the Kubecost API endpoint. Default is "/model/" |
-| AGGREGATION | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod. Default is pod. Note: Exporter collects namespace labels regardless of set aggregation level and includes them into entity labels. |
-| IDLE | Indicates whether to include cost of idle resources. Valid values are true and false. Default is true. |
-| IDLE_BY_NODE | Indicates whether idle allocations are created on a per node basis. Valid values are true and false. Default is false. |
-| SHARE_IDLE | Indicates whether allocate idle cost proportionally across non-idle resources. Default is false. |
-| SHARE_NAMESPACES | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. Default = kube-system,cadvisor |
-| SHARE_TENANCY_COSTS | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. Default is true. |
-| MULTIPLIER | Optional multiplier for costs. Default is 1. |
+| SERVICE_APP_CLIENT_SECRET | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation.                                                                      |
+| SHARD | The zone of your Flexera One account. Valid values are NAM, EU or AU.                                                                                                                                                                                                                                                                  |
+| INCLUDE_PREVIOUS_MONTH | Indicates whether to collect and export previous month. Default is false. This parameter is incompatible with REFRESH_TOKEN, use only one of them.                                                                                                                                                                                     |
+| REQUEST_TIMEOUT | Indicates the timeout per each request in minutes.                                                                                                                                                                                                                                                                                     |
+| KUBECOST_HOST | The hostname of the Kubecost instance. Default is "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090".                                                                                                                                                                                                                            |
+| KUBECOST_API_PATH | The base path for the Kubecost API endpoint. Default is "/model/"                                                                                                                                                                                                                                                                      |
+| AGGREGATION | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node or pod. Default is pod. Note: Exporter collects namespace labels regardless of set aggregation level and includes them into entity labels.                                                                                |
+| IDLE | Indicates whether to include cost of idle resources. Valid values are true and false. Default is true.                                                                                                                                                                                                                                 |
+| IDLE_BY_NODE | Indicates whether idle allocations are created on a per node basis. Valid values are true and false. Default is false.                                                                                                                                                                                                                 |
+| SHARE_IDLE | Indicates whether allocate idle cost proportionally across non-idle resources. Default is false.                                                                                                                                                                                                                                       |
+| SHARE_NAMESPACES | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. Default = kube-system,cadvisor                                                                                                                                                                                                    |
+| SHARE_TENANCY_COSTS | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. Default is true.                                                                                                                                                                                                                     |
+| MULTIPLIER | Optional multiplier for costs. Default is 1.                                                                                                                                                                                                                                                                                           |
 
 #### Execution
 
@@ -152,7 +160,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 ### Helm configuration Values
 
 | Key | Type | Default | Description |
-| --- | --- | --- | --- |
+|-----|------|---------|-------------|
 | activeDeadlineSeconds | int | `10800` | The maximum duration in seconds for the cron job to complete |
 | cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
 | env | object | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
@@ -160,16 +168,16 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept. |
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |
 | flexera.orgId | string | `""` | The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation. |
-| flexera.refreshToken | string | `""` | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation. You can provide the refresh token in two ways: 1. Directly as a string: refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret: refreshToken: valueFrom: secretKeyRef: name: flexera-secrets # Name of the Kubernetes secret key: refresh_token # Key in the secret containing the refresh token |
+| flexera.refreshToken | string | `""` | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation. You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
 | flexera.serviceAppClientId | string | `""` | The service account client ID used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.serviceAppClientSecret | string | `""` | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.13"` |  |
+| image.tag | string | `"1.15"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Indicates whether to collect and export previous month. |
-| kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod. |
+| kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
 | kubecost.apiPath | string | `"/model/"` | The base path for the Kubecost API endpoint. |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Indicates whether to include cost of idle resources. |

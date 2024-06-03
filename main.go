@@ -636,8 +636,12 @@ func newApp() *App {
 	switch a.Aggregation {
 	case "namespace":
 		a.aggregation = "cluster," + a.Aggregation
-	case "controller", "pod":
-		a.aggregation = "cluster,namespace," + a.Aggregation
+	case "controller":
+		a.aggregation = "cluster,namespace,controllerKind," + a.Aggregation
+	case "node":
+		a.aggregation = "cluster,namespace,controllerKind,controller," + a.Aggregation
+	case "pod":
+		a.aggregation = "cluster,namespace,controllerKind,controller,node," + a.Aggregation
 	default:
 		log.Fatal("Aggregation type is wrong")
 	}

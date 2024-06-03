@@ -144,7 +144,7 @@ func Test_newApp(t *testing.T) {
 		t.Error("aggregation is not initialized")
 	}
 
-	expectedAggregation := "cluster,namespace,controller"
+	expectedAggregation := "cluster,namespace,controllerKind,controller"
 	if a.aggregation != expectedAggregation {
 		t.Errorf("Aggregation is %s, expected %s", a.aggregation, expectedAggregation)
 	}
