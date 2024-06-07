@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.14.0](https://img.shields.io/badge/Version-1.14.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.14](https://img.shields.io/badge/AppVersion-1.14-informational?style=flat-square)
+![Version: 1.15.0](https://img.shields.io/badge/Version-1.15.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.15](https://img.shields.io/badge/AppVersion-1.15-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -98,10 +98,10 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.14"` |  |
+| image.tag | string | `"1.15"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Indicates whether to collect and export previous month. |
-| kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod. |
+| kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
 | kubecost.apiPath | string | `"/model/"` | The base path for the Kubecost API endpoint. |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Indicates whether to include cost of idle resources. |

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.15.0
+
+-   Added some modifications building aggregation query param to address Kubecost Allocation API changes made for versions 2.3 and higher.
+
 ## v1.14.0
 
 -   Improved OpenCost support. Added description of settings for integration with OpenCost in README.md

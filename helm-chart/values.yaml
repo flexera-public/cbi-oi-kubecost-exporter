@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.14"
+  tag: "1.15"
 
 imagePullSecrets: []
 
@@ -49,7 +49,7 @@ kubecost:
   host: "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"
   # -- The base path for the Kubecost API endpoint.
   apiPath: "/model/"
-  # -- The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, or pod.
+  # -- The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod.
   aggregation: "pod"
   # -- Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations.
   shareNamespaces: "kube-system,cadvisor"
