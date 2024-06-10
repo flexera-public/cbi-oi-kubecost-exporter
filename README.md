@@ -4,11 +4,11 @@ Kubecost Flexera Exporter is a utility to collect cost allocation data. It is a 
 
 ## Supported Kubecost Allocation API Versions
 
-This exporter is able to work with 1.x, 2.3 or higher versions.
+This exporter is able to work with 1.x, 2.2.3 or higher versions.
 
-With versions from 2.0 to 2.2.x there could be some unexpected results when using the Allocation API, especially using the shareIdle parameter which in those versions is not correctly implemented. That is why it is not recommended to use any of these versions.
+With versions from 2.0 to 2.2.2 there could be some unexpected results when using the Allocation API, especially using the shareIdle parameter which in those versions is not correctly implemented. That is why it is not recommended to use any of these versions.
 
-NOTE: For versions 2.3 and higher, the properties received from the Kubecost Allocation API depend on the level of aggregation being used, smaller levels of granularity will include higher levels but not vice versa. For instance if you set aggregation as pod, exporter will include data for cluster, namespace, controller, controllerKind, node and pod but if you set aggregation as namespace, exporter won't include data for controller, controllerKind, node and pod.
+NOTE: For versions 2.2.3 and higher, the properties received from the Kubecost Allocation API depend on the level of aggregation being used, smaller levels of granularity will include higher levels but not vice versa. For instance if you set aggregation as pod, exporter will include data for cluster, namespace, controller, controllerKind, node and pod but if you set aggregation as namespace, exporter won't include data for controller, controllerKind, node and pod.
 
 ## OpenCost Support
 
