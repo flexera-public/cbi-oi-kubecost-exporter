@@ -134,6 +134,7 @@ type (
 		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 		RequestTimeout       int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
 		MaxFileRows          int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		CreateBillConnectIfNotExist bool `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
 	}
 
 	App struct {
@@ -475,6 +476,7 @@ func (a *App) generateAccessToken() (string, error) {
 		"NAM": "flexera.com",
 		"EU":  "flexera.eu",
 		"AU":  "flexera.au",
+		"DEV": "flexeratest.com"
 	}
 	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[a.Shard])
 	reqBody := url.Values{}
