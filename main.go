@@ -345,6 +345,12 @@ func (a *App) uploadToFlexera() {
 }
 
 func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string) (billUploadID string, err error) {
+
+	if(a.CreateBillConnectIfNotExist){
+		createBillConnect := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
+		
+	}
+
 	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
 
 	billUploadJSON, _ := json.Marshal(billUpload)
