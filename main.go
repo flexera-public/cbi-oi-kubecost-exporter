@@ -114,27 +114,27 @@ type (
 	}
 
 	Config struct {
-		RefreshToken         string  `env:"REFRESH_TOKEN"`
-		ServiceClientId      string  `env:"SERVICE_APP_CLIENT_ID"`
-		ServiceClientSecret  string  `env:"SERVICE_APP_CLIENT_SECRET"`
-		OrgID                string  `env:"ORG_ID"`
-		BillConnectID        string  `env:"BILL_CONNECT_ID"`
-		Shard                string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle                 bool    `env:"IDLE" envDefault:"true"`
-		IdleByNode           bool    `env:"IDLE_BY_NODE" envDefault:"false"`
-		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
-		RequestTimeout       int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
-		MaxFileRows          int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
-		CreateBillConnectIfNotExist bool `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
+		RefreshToken                string  `env:"REFRESH_TOKEN"`
+		ServiceClientId             string  `env:"SERVICE_APP_CLIENT_ID"`
+		ServiceClientSecret         string  `env:"SERVICE_APP_CLIENT_SECRET"`
+		OrgID                       string  `env:"ORG_ID"`
+		BillConnectID               string  `env:"BILL_CONNECT_ID"`
+		Shard                       string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost                string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath             string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation                 string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces             string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                        bool    `env:"IDLE" envDefault:"true"`
+		IdleByNode                  bool    `env:"IDLE_BY_NODE" envDefault:"false"`
+		ShareIdle                   bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts           bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier                  float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation                bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath                    string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		RequestTimeout              int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
+		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
 	}
 
 	App struct {
@@ -346,9 +346,10 @@ func (a *App) uploadToFlexera() {
 
 func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string) (billUploadID string, err error) {
 
-	if(a.CreateBillConnectIfNotExist){
-		createBillConnect := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
-		
+	if a.CreateBillConnectIfNotExist {
+		url := fmt.Sprintf("%s/%s/operations", a.billUploadURL, billUploadID)
+		log.Println(url)
+
 	}
 
 	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
@@ -479,10 +480,10 @@ func (a *App) doPost(url, data string, headers map[string]string) (*http.Respons
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken or service account.
 func (a *App) generateAccessToken() (string, error) {
 	domainsDict := map[string]string{
-		"NAM": "flexera.com",
+		"DEV": "flexeratest.com",
+		"NAM": "fexera.com",
 		"EU":  "flexera.eu",
 		"AU":  "flexera.au",
-		"DEV": "flexeratest.com"
 	}
 	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[a.Shard])
 	reqBody := url.Values{}
@@ -612,6 +613,7 @@ func newApp() *App {
 		"NAM": "api.optima.flexeraeng.com",
 		"EU":  "api.optima-eu.flexeraeng.com",
 		"AU":  "api.optima-apac.flexeraeng.com",
+		"DEV": "api.flexeratest.com",
 	}
 
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
@@ -655,7 +657,7 @@ func newApp() *App {
 	}
 
 	switch a.Shard {
-	case "NAM", "EU", "AU":
+	case "NAM", "EU", "AU", "DEV":
 	default:
 		log.Fatal("Shard is wrong")
 	}
