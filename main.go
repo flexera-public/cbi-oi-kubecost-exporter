@@ -403,7 +403,7 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 	}
 
 	integrationId := "cbi-oi-kubecost"
-	//Find the bill identifier
+	//Split the billConnectId using the integrationId based on the bill identifier
 	billIdentifierArr := strings.Split(a.BillConnectID, integrationId)
 
 	if len(billIdentifierArr) != 2 {
@@ -424,13 +424,7 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 	//Vendor name is same as display name
 	params := map[string]string{"displayName": a.VendorName, "vendorName": a.VendorName}
 
-	shardDict := map[string]string{
-		"NAM": "api.optima.flexeraeng.com",
-		"EU":  "api.optima-eu.flexeraeng.com",
-		"AU":  "api.optima-apac.flexeraeng.com",
-		"DEV": "api.flexeratest.com",
-	}
-
+	shardDict := getShardDict()
 	//name field has same value as bill identifier
 	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": integrationId, "name": trimmedBillIdentifier, "params": params}
 	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
@@ -663,13 +657,17 @@ func (a *App) DaysInMonth(month string) int {
 	return int(numDays)
 }
 
-func newApp() *App {
-	shardDict := map[string]string{
+func getShardDict() map[string]string {
+	return map[string]string{
 		"NAM": "api.optima.flexeraeng.com",
 		"EU":  "api.optima-eu.flexeraeng.com",
 		"AU":  "api.optima-apac.flexeraeng.com",
 		"DEV": "api.flexeratest.com",
 	}
+}
+
+func newApp() *App {
+	shardDict := getShardDict()
 
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
