@@ -69,9 +69,7 @@ The app is configured using environment variables defined in a .env file. The fo
 | SHARE_NAMESPACES | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. Default = kube-system,cadvisor                                                                                                                                                                                                    |
 | SHARE_TENANCY_COSTS | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. Default is true.                                                                                                                                                                                                                     |
 | CREATE_BILL_CONNECT_IF_NOT_EXIST | Flag to enable creation of Bill Connect, if not existing . Default is false.                                                                                                                                                                                                                                                                                           |
-
 | VENDOR_NAME | Vendor name for the Bill Connect . Default is Kubecost.                                                                                                                                                                                                                                                                                           |
-
 | MULTIPLIER | Optional multiplier for costs. Default is 1.                                                                                                                                                                                                                                                                                           |
 
 #### Execution
