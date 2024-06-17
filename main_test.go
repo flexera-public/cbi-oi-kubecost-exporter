@@ -172,9 +172,7 @@ func Test_newApp(t *testing.T) {
 		MaxFileRows:                 1000,
 		IntegrationId:               "cbi-oi-kubecost",
 		CreateBillConnectIfNotExist: false,
-		BillConnectName:             "Kubecost",
 		VendorName:                  "Kubecost",
-		DisplayName:                 "Kubecost",
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)
