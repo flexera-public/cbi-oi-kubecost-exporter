@@ -96,8 +96,8 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.serviceAppClientId | string | `""` | The service account client ID used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.serviceAppClientSecret | string | `""` | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
-| flexera.createbillconnectIfnotExist | bool | `false` | Flag to enable automatic creation of Bill Connect. Default value is false. |
-| flexera.vendorName | string | `"Kubecost"` | Flag to enable automatic creation of Bill Connect. Default value is false. |
+| flexera.createbillconnectIfNotExist | bool | `false` | Flag to enable automatic creation of Bill Connect. Default value is false. |
+| flexera.vendorName | string | `"Kubecost"` | Vendor name of the Bill Connect. Default value is Kubecost. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.16"` |  |
