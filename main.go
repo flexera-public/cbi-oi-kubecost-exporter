@@ -134,7 +134,11 @@ type (
 		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 		RequestTimeout              int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
 		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		IntegrationId               string  `env:"INTEGRATION_ID" envDefault:"cbi-oi-kubecost"`
 		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
+		Name                        string  `env:"BILL_CONNECT_NAME" envDefault:"Kubecost"`
+		VENDOR_NAME                 string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
+		DISPLAY_NAME                string  `env:"DISPLAY_NAME" envDefault:"Kubecost"`
 	}
 
 	App struct {
@@ -345,13 +349,8 @@ func (a *App) uploadToFlexera() {
 }
 
 func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string) (billUploadID string, err error) {
-
-	if a.CreateBillConnectIfNotExist {
-		url := fmt.Sprintf("%s/%s/operations", a.billUploadURL, billUploadID)
-		log.Println(url)
-
-	}
-
+	//Before the upload process create bill connect
+	a.createBillConnectIfNotExist(authHeaders)
 	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
 
 	billUploadJSON, _ := json.Marshal(billUpload)
@@ -397,6 +396,63 @@ func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string
 	}
 
 	return jsonResponse["id"].(string), nil
+}
+
+func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
+
+	fmt.Println(authHeaders["Authorization"])
+
+	//If the flag is not enabled, do not attempt to create the bill connect
+	if !a.CreateBillConnectIfNotExist {
+		return
+	}
+	//Find the bill identifier
+	billIdentifierArr := strings.Split(a.BillConnectID, a.IntegrationId)
+
+	if len(billIdentifierArr) != 2 {
+		//When the bill connect id is not provided, abort the process
+		log.Fatalf("Invalid bill connect Id: %v", a.BillConnectID)
+	}
+
+	billIdentifier := billIdentifierArr[1]
+	var left int
+	for index, char := range billIdentifier {
+		//The identifier can have both chars
+		if char != '-' && char != '_' {
+			left = index
+			break
+		}
+	}
+	trimmedBillIdentifier := billIdentifier[left:]
+	params := map[string]string{"displayName": a.Name, "vendorName": a.VENDOR_NAME}
+
+	shardDict := map[string]string{
+		"NAM": "api.optima.flexeraeng.com",
+		"EU":  "api.optima-eu.flexeraeng.com",
+		"AU":  "api.optima-apac.flexeraeng.com",
+		"DEV": "api.flexeratest.com",
+	}
+
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": a.IntegrationId, "name": a.Name, "params": params}
+	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
+
+	billConnectJson, _ := json.Marshal(createBillConnectPayload)
+	response, err := a.doPost(url, string(billConnectJson), authHeaders)
+	if err != nil {
+		//When the bill connect id is not provided, abort the process
+		log.Fatalf("Error while creating the bill connect : %v", err)
+	}
+
+	switch response.StatusCode {
+	case 201:
+		log.Println("Bill Connect Id is created %s", a.BillConnectID)
+		break
+	case 409:
+		log.Println("Bill Connect Id already exists %s", a.BillConnectID)
+		break
+	default:
+		log.Fatalf("Error while creating the bill connect : %v", err)
+	}
 }
 
 func (a *App) CommitBillUploadProcess(billUploadID string, headers map[string]string) error {
