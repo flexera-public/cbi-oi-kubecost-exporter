@@ -400,8 +400,6 @@ func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string
 
 func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 
-	fmt.Println(authHeaders["Authorization"])
-
 	//If the flag is not enabled, do not attempt to create the bill connect
 	if !a.CreateBillConnectIfNotExist {
 		return

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.16.0
+
+-   Allow creation of Bill Connect (if not existing) conditionally based on flag CREATE_BILL_CONNECT_IF_NOT_EXIST
+-   To support the creating of Bill Connect, introduced additional Parameters - INTEGRATION_ID, BILL_CONNECT_NAME, VENDOR_NAME, DISPLAY_NAME
+
 ## v1.15.0
 
 -   Added some modifications building aggregation query param to address Kubecost Allocation API changes made for versions 2.3 and higher.
