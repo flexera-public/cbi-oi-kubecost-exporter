@@ -170,7 +170,6 @@ func Test_newApp(t *testing.T) {
 		IncludePreviousMonth:        false,
 		RequestTimeout:              5,
 		MaxFileRows:                 1000,
-		IntegrationId:               "cbi-oi-kubecost",
 		CreateBillConnectIfNotExist: false,
 		VendorName:                  "Kubecost",
 	}

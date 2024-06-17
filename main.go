@@ -134,7 +134,6 @@ type (
 		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
 		RequestTimeout              int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
 		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
-		IntegrationId               string  `env:"INTEGRATION_ID" envDefault:"cbi-oi-kubecost"`
 		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
 		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
 	}
@@ -402,8 +401,10 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 	if !a.CreateBillConnectIfNotExist {
 		return
 	}
+
+	integrationId := "cbi-oi-kubecost"
 	//Find the bill identifier
-	billIdentifierArr := strings.Split(a.BillConnectID, a.IntegrationId)
+	billIdentifierArr := strings.Split(a.BillConnectID, integrationId)
 
 	if len(billIdentifierArr) != 2 {
 		//When the bill connect id is not provided, abort the process
@@ -431,7 +432,7 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 	}
 
 	//name field has same value as bill identifier
-	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": a.IntegrationId, "name": trimmedBillIdentifier, "params": params}
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": integrationId, "name": trimmedBillIdentifier, "params": params}
 	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
 
 	billConnectJson, _ := json.Marshal(createBillConnectPayload)
