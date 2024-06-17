@@ -136,9 +136,9 @@ type (
 		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
 		IntegrationId               string  `env:"INTEGRATION_ID" envDefault:"cbi-oi-kubecost"`
 		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
-		BILL_CONNECT_NAME           string  `env:"BILL_CONNECT_NAME" envDefault:"Kubecost"`
-		VENDOR_NAME                 string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
-		DISPLAY_NAME                string  `env:"DISPLAY_NAME" envDefault:"Kubecost"`
+		BillConnectName             string  `env:"BILL_CONNECT_NAME" envDefault:"Kubecost"`
+		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
+		DisplayName                 string  `env:"DISPLAY_NAME" envDefault:"Kubecost"`
 	}
 
 	App struct {
@@ -422,7 +422,7 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 		}
 	}
 	trimmedBillIdentifier := billIdentifier[left:]
-	params := map[string]string{"displayName": a.DISPLAY_NAME, "vendorName": a.VENDOR_NAME}
+	params := map[string]string{"displayName": a.DisplayName, "vendorName": a.VendorName}
 
 	shardDict := map[string]string{
 		"NAM": "api.optima.flexeraeng.com",
@@ -431,7 +431,7 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 		"DEV": "api.flexeratest.com",
 	}
 
-	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": a.IntegrationId, "name": a.BILL_CONNECT_NAME, "params": params}
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": a.IntegrationId, "name": a.BillConnectName, "params": params}
 	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
 
 	billConnectJson, _ := json.Marshal(createBillConnectPayload)
@@ -443,10 +443,10 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 
 	switch response.StatusCode {
 	case 201:
-		log.Println("Bill Connect Id is created %s", a.BillConnectID)
+		log.Printf("Bill Connect Id is created %s", a.BillConnectID)
 		break
 	case 409:
-		log.Println("Bill Connect Id already exists %s", a.BillConnectID)
+		log.Printf("Bill Connect Id already exists %s", a.BillConnectID)
 		break
 	default:
 		log.Fatalf("Error while creating the bill connect : %v", err)
