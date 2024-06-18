@@ -71,6 +71,10 @@ spec:
                 value: "{{ .Values.includePreviousMonth }}"
               - name: REQUEST_TIMEOUT
                 value: "{{ .Values.requestTimeout }}"
+              - name: CREATE_BILL_CONNECT_IF_NOT_EXIST
+                value: "{{ .Values.flexera.createBillConnectIfNotExist }}"
+              - name: VENDOR_NAME
+                value: "{{ .Values.flexera.vendorName }}"
               {{- range $key, $val := .Values.env }}
               - name: {{ $key }}
                 value: {{ $val | quote }}

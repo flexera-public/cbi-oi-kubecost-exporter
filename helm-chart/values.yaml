@@ -43,6 +43,10 @@ flexera:
   billConnectId: "cbi-oi-kubecost-1"
   # -- The zone of your Flexera One account. Valid values are NAM, EU or AU.
   shard: "NAM"
+  # -- Flag to enable automatic creation of Bill Connect. Default is false.
+  createBillConnectIfNotExist: "false"
+   # -- Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost".
+  vendorName: "Kubecost"
 
 kubecost:
   # -- Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local
