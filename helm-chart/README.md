@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.15.0](https://img.shields.io/badge/Version-1.15.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.15](https://img.shields.io/badge/AppVersion-1.15-informational?style=flat-square)
+![Version: 1.16.0](https://img.shields.io/badge/Version-1.16.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.16](https://img.shields.io/badge/AppVersion-1.16-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -98,7 +98,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.15"` |  |
+| image.tag | string | `"1.16"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Indicates whether to collect and export previous month. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
@@ -113,4 +113,3 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. Recommended setting is true to prevent loss of historical data. |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size. |
 | requestTimeout | int | `5` | Indicates the timeout per each request in minutes. |
-

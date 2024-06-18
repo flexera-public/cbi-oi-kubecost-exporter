@@ -114,26 +114,28 @@ type (
 	}
 
 	Config struct {
-		RefreshToken         string  `env:"REFRESH_TOKEN"`
-		ServiceClientId      string  `env:"SERVICE_APP_CLIENT_ID"`
-		ServiceClientSecret  string  `env:"SERVICE_APP_CLIENT_SECRET"`
-		OrgID                string  `env:"ORG_ID"`
-		BillConnectID        string  `env:"BILL_CONNECT_ID"`
-		Shard                string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle                 bool    `env:"IDLE" envDefault:"true"`
-		IdleByNode           bool    `env:"IDLE_BY_NODE" envDefault:"false"`
-		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
-		RequestTimeout       int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
-		MaxFileRows          int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		RefreshToken                string  `env:"REFRESH_TOKEN"`
+		ServiceClientId             string  `env:"SERVICE_APP_CLIENT_ID"`
+		ServiceClientSecret         string  `env:"SERVICE_APP_CLIENT_SECRET"`
+		OrgID                       string  `env:"ORG_ID"`
+		BillConnectID               string  `env:"BILL_CONNECT_ID"`
+		Shard                       string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost                string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath             string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation                 string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces             string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                        bool    `env:"IDLE" envDefault:"true"`
+		IdleByNode                  bool    `env:"IDLE_BY_NODE" envDefault:"false"`
+		ShareIdle                   bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts           bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier                  float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation                bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath                    string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		RequestTimeout              int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
+		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
+		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
 	}
 
 	App struct {
@@ -344,6 +346,8 @@ func (a *App) uploadToFlexera() {
 }
 
 func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string) (billUploadID string, err error) {
+	//Before the upload process create bill connect
+	a.createBillConnectIfNotExist(authHeaders)
 	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
 
 	billUploadJSON, _ := json.Marshal(billUpload)
@@ -389,6 +393,59 @@ func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string
 	}
 
 	return jsonResponse["id"].(string), nil
+}
+
+func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
+
+	//If the flag is not enabled, do not attempt to create the bill connect
+	if !a.CreateBillConnectIfNotExist {
+		return
+	}
+
+	integrationId := "cbi-oi-kubecost"
+	//Split the billConnectId using the integrationId based on the bill identifier
+	billIdentifierArr := strings.Split(a.BillConnectID, integrationId)
+
+	if len(billIdentifierArr) != 2 {
+		//When the bill connect id is not provided, abort the process
+		log.Fatalf("Invalid bill connect Id: %v", a.BillConnectID)
+	}
+
+	billIdentifier := billIdentifierArr[1]
+	var left int
+	for index, char := range billIdentifier {
+		//The identifier can have both chars
+		if char != '-' && char != '_' {
+			left = index
+			break
+		}
+	}
+	trimmedBillIdentifier := billIdentifier[left:]
+	//Vendor name is same as display name
+	params := map[string]string{"displayName": a.VendorName, "vendorName": a.VendorName}
+
+	shardDict := getShardDict()
+	//name field has same value as bill identifier
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": integrationId, "name": trimmedBillIdentifier, "params": params}
+	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
+
+	billConnectJson, _ := json.Marshal(createBillConnectPayload)
+	response, err := a.doPost(url, string(billConnectJson), authHeaders)
+	if err != nil {
+		//When the bill connect id is not provided, abort the process
+		log.Fatalf("Error while creating the bill connect : %v", err)
+	}
+
+	switch response.StatusCode {
+	case 201:
+		log.Printf("Bill Connect Id is created %s", a.BillConnectID)
+		break
+	case 409:
+		log.Printf("Bill Connect Id already exists %s", a.BillConnectID)
+		break
+	default:
+		log.Fatalf("Error while creating the bill connect : %v", err)
+	}
 }
 
 func (a *App) CommitBillUploadProcess(billUploadID string, headers map[string]string) error {
@@ -472,7 +529,8 @@ func (a *App) doPost(url, data string, headers map[string]string) (*http.Respons
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken or service account.
 func (a *App) generateAccessToken() (string, error) {
 	domainsDict := map[string]string{
-		"NAM": "flexera.com",
+		"DEV": "flexeratest.com",
+		"NAM": "fexera.com",
 		"EU":  "flexera.eu",
 		"AU":  "flexera.au",
 	}
@@ -599,12 +657,17 @@ func (a *App) DaysInMonth(month string) int {
 	return int(numDays)
 }
 
-func newApp() *App {
-	shardDict := map[string]string{
+func getShardDict() map[string]string {
+	return map[string]string{
 		"NAM": "api.optima.flexeraeng.com",
 		"EU":  "api.optima-eu.flexeraeng.com",
 		"AU":  "api.optima-apac.flexeraeng.com",
+		"DEV": "api.flexeratest.com",
 	}
+}
+
+func newApp() *App {
+	shardDict := getShardDict()
 
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
@@ -647,7 +710,7 @@ func newApp() *App {
 	}
 
 	switch a.Shard {
-	case "NAM", "EU", "AU":
+	case "NAM", "EU", "AU", "DEV":
 	default:
 		log.Fatal("Shard is wrong")
 	}
