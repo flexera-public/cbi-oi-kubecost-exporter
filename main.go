@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -395,6 +396,13 @@ func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string
 	return jsonResponse["id"].(string), nil
 }
 
+func getIdentifier(prefix string, billConnectId string) (string, error) {
+	if !strings.HasPrefix(billConnectId, prefix) {
+		return "", errors.New("billConnectId does not start with the required prefix")
+	}
+	return strings.TrimPrefix(billConnectId, prefix+"-"), nil
+}
+
 func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 
 	//If the flag is not enabled, do not attempt to create the bill connect
@@ -404,29 +412,16 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 
 	integrationId := "cbi-oi-kubecost"
 	//Split the billConnectId using the integrationId based on the bill identifier
-	billIdentifierArr := strings.Split(a.BillConnectID, integrationId)
-
-	if len(billIdentifierArr) != 2 {
-		//When the bill connect id is not provided, abort the process
-		log.Fatalf("Invalid bill connect Id: %v", a.BillConnectID)
+	if !strings.HasPrefix(a.BillConnectID, integrationId) {
+		log.Fatal("billConnectId does not start with the required prefix")
 	}
-
-	billIdentifier := billIdentifierArr[1]
-	var left int
-	for index, char := range billIdentifier {
-		//The identifier can have both chars
-		if char != '-' && char != '_' {
-			left = index
-			break
-		}
-	}
-	trimmedBillIdentifier := billIdentifier[left:]
+	billIdentifier := strings.TrimPrefix(a.BillConnectID, integrationId+"-")
 	//Vendor name is same as display name
 	params := map[string]string{"displayName": a.VendorName, "vendorName": a.VendorName}
 
 	shardDict := getShardDict()
 	//name field has same value as bill identifier
-	createBillConnectPayload := map[string]interface{}{"billIdentifier": trimmedBillIdentifier, "integrationId": integrationId, "name": trimmedBillIdentifier, "params": params}
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": billIdentifier, "integrationId": integrationId, "name": billIdentifier, "params": params}
 	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
 
 	billConnectJson, _ := json.Marshal(createBillConnectPayload)

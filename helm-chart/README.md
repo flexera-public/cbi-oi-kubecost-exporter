@@ -14,6 +14,8 @@ helm install kubecost-exporter cbi-oi-kubecost-exporter \
     --namespace kubecost-exporter --create-namespace \
     --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
     --set flexera.orgId="1105" \
+    --set flexera.createBillConnectIdNotExist="true" \
+    --set flexera.vendorName="test-vendor" \
     --set flexera.billConnectId="cbi-oi-kubecost-..." \
     ...
 ```
@@ -27,6 +29,8 @@ flexera:
     refreshToken: "Ek-aGVsbUBrdWJlY29zdC5jb20..."
     orgId: "1105"
     billConnectId: "cbi-oi-kubecost-..."
+    createBillConnectIdNotExist: 'true'
+    vendorName: 'test-vendor'
 
 kubecost:
     aggregation: "pod"
@@ -96,6 +100,8 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.serviceAppClientId | string | `""` | The service account client ID used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.serviceAppClientSecret | string | `""` | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
+| flexera.createBillConnectIfNotExist | bool | `"false"` | Flag to enable automatic creation of Bill Connect. Default is false. |
+| flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost". |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.16"` |  |
