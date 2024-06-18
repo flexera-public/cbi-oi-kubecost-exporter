@@ -4,6 +4,7 @@
 
 -   Allow creation of Bill Connect (if not existing) conditionally based on flag CREATE_BILL_CONNECT_IF_NOT_EXIST
 -   To support the creation of Bill Connect, introduced additional Parameter - VENDOR_NAME. This parameter is only used when the CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true.
+-   Added query parameter 'accumulate' for Kubecost Allocation API requests to sum the entire range of time intervals into a single set and reduce response size.
 
 ## v1.15.0
 

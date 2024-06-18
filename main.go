@@ -184,7 +184,6 @@ func (a *App) updateFromKubecost() {
 		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
 		reqUrl := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
 		req, err := http.NewRequest("GET", reqUrl, nil)
-		log.Printf("Request: %+v\n", reqUrl)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -200,7 +199,10 @@ func (a *App) updateFromKubecost() {
 		q.Add("shareSplit", "weighted")
 		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
 		q.Add("step", "1d")
+		q.Add("accumulate", "true")
+
 		req.URL.RawQuery = q.Encode()
+		log.Printf("Request: %+v?%s\n", reqUrl, q.Encode())
 
 		resp, err := a.client.Do(req)
 		if err != nil {
