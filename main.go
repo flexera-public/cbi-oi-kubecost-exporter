@@ -7,7 +7,6 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -394,13 +393,6 @@ func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string
 	}
 
 	return jsonResponse["id"].(string), nil
-}
-
-func getIdentifier(prefix string, billConnectId string) (string, error) {
-	if !strings.HasPrefix(billConnectId, prefix) {
-		return "", errors.New("billConnectId does not start with the required prefix")
-	}
-	return strings.TrimPrefix(billConnectId, prefix+"-"), nil
 }
 
 func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
