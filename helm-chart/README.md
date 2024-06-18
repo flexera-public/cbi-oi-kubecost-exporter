@@ -14,7 +14,7 @@ helm install kubecost-exporter cbi-oi-kubecost-exporter \
     --namespace kubecost-exporter --create-namespace \
     --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
     --set flexera.orgId="1105" \
-    --set flexera.createBillConnectIdNotExist="true" \
+    --set flexera.createBillConnectIfNotExist="true" \
     --set flexera.vendorName="test-vendor" \
     --set flexera.billConnectId="cbi-oi-kubecost-..." \
     ...
@@ -29,7 +29,7 @@ flexera:
     refreshToken: "Ek-aGVsbUBrdWJlY29zdC5jb20..."
     orgId: "1105"
     billConnectId: "cbi-oi-kubecost-..."
-    createBillConnectIdNotExist: 'true'
+    createBillConnectIfNotExist: 'true'
     vendorName: 'test-vendor'
 
 kubecost:
