@@ -43,9 +43,9 @@ flexera:
   billConnectId: "cbi-oi-kubecost-1"
   # -- The zone of your Flexera One account. Valid values are NAM, EU or AU.
   shard: "NAM"
-  # -- Flag to enable automatic creation of Bill Connect. Default is false.
+  # -- Flag to enable automatic creation of Bill Connect.
   createBillConnectIfNotExist: "false"
-   # -- Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost".
+  # -- Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true.
   vendorName: "Kubecost"
 
 kubecost:
@@ -68,7 +68,7 @@ kubecost:
   # -- Optional multiplier for costs.
   multiplier: 1.0
 
-# -- Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept.
+# -- Indicates whether to delete files generated for previous months. Note: current and previous months data is kept.
 fileRotation: true
 
 # -- File path to mount persistent volume.

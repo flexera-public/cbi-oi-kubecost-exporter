@@ -171,15 +171,15 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
 | env | object | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
 | filePath | string | `"/var/kubecost"` | File path to mount persistent volume. |
-| fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept. |
+| fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Note: current and previous months data is kept. |
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |
+| flexera.createBillConnectIfNotExist | string | `"false"` | Flag to enable automatic creation of Bill Connect. |
 | flexera.orgId | string | `""` | The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation. |
 | flexera.refreshToken | string | `""` | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation. You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
 | flexera.serviceAppClientId | string | `""` | The service account client ID used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.serviceAppClientSecret | string | `""` | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.shard | string | `"NAM"` | The zone of your Flexera One account. Valid values are NAM, EU or AU. |
-| flexera.createBillConnectIfNotExist | bool | `"false"` | Flag to enable automatic creation of Bill Connect. Default is false. |
-| flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost". |
+| flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.16"` |  |

@@ -413,10 +413,9 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 	//Vendor name is same as display name
 	params := map[string]string{"displayName": a.VendorName, "vendorName": a.VendorName}
 
-	shardDict := getShardDict()
 	//name field has same value as bill identifier
 	createBillConnectPayload := map[string]interface{}{"billIdentifier": billIdentifier, "integrationId": integrationId, "name": billIdentifier, "params": params}
-	url := fmt.Sprintf("https://%s/%s/%s/%s", shardDict[a.Shard], "finops-onboarding/v1/orgs/", a.OrgID, "bill-connects/cbi")
+	url := fmt.Sprintf("https://api.%s/%s/%s/%s", a.getFlexeraDomain(), "finops-onboarding/v1/orgs", a.OrgID, "bill-connects/cbi")
 
 	billConnectJson, _ := json.Marshal(createBillConnectPayload)
 	response, err := a.doPost(url, string(billConnectJson), authHeaders)
@@ -517,13 +516,7 @@ func (a *App) doPost(url, data string, headers map[string]string) (*http.Respons
 
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken or service account.
 func (a *App) generateAccessToken() (string, error) {
-	domainsDict := map[string]string{
-		"DEV": "flexeratest.com",
-		"NAM": "fexera.com",
-		"EU":  "flexera.eu",
-		"AU":  "flexera.au",
-	}
-	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[a.Shard])
+	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", a.getFlexeraDomain())
 	reqBody := url.Values{}
 	if len(a.RefreshToken) > 0 {
 		reqBody.Set("grant_type", "refresh_token")
@@ -646,41 +639,31 @@ func (a *App) DaysInMonth(month string) int {
 	return int(numDays)
 }
 
-func getShardDict() map[string]string {
-	return map[string]string{
+func (a *App) getOptimaAPIDomain() string {
+	optimaAPIDomainsDict := map[string]string{
 		"NAM": "api.optima.flexeraeng.com",
 		"EU":  "api.optima-eu.flexeraeng.com",
 		"AU":  "api.optima-apac.flexeraeng.com",
-		"DEV": "api.flexeratest.com",
+		"DEV": "api.optima.flexeraengdev.com",
 	}
+	return optimaAPIDomainsDict[a.Shard]
 }
 
-func newApp() *App {
-	shardDict := getShardDict()
-
-	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
-	a := App{
-		filesToUpload:   make(map[string]map[string]struct{}),
-		client:          &http.Client{},
-		lastInvoiceDate: lastInvoiceDate,
+func (a *App) getFlexeraDomain() string {
+	domainsDict := map[string]string{
+		"NAM": "flexera.com",
+		"EU":  "flexera.eu",
+		"AU":  "flexera.au",
+		"DEV": "flexeratest.com",
 	}
-	if err := env.Parse(&a.Config); err != nil {
-		log.Fatal(err)
-	}
+	return domainsDict[a.Shard]
+}
 
-	a.client.Timeout = time.Duration(a.RequestTimeout) * time.Minute
-	a.billUploadURL = fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
-
-	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
-	if a.IncludePreviousMonth {
-		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
-	}
-	// The mandatory file saving period is the period since the first day of the previous month of last invoice date
-	previousMonthOfLastInvoiceDate := lastInvoiceDate.AddDate(0, -1, 0)
-	a.mandatoryFileSavingPeriodStartDate = time.Date(previousMonthOfLastInvoiceDate.Year(), previousMonthOfLastInvoiceDate.Month(), 1, 0, 0, 0, 0, previousMonthOfLastInvoiceDate.Location())
-
-	for _, month := range a.invoiceMonths {
-		a.filesToUpload[month] = make(map[string]struct{})
+func (a *App) validateAppConfiguration() error {
+	switch a.Shard {
+	case "NAM", "EU", "AU", "DEV":
+	default:
+		return fmt.Errorf("shard: %s is wrong", a.Shard)
 	}
 
 	a.Aggregation = strings.ToLower(a.Aggregation)
@@ -695,13 +678,40 @@ func newApp() *App {
 	case "pod":
 		a.aggregation = "cluster,namespace,controllerKind,controller,node," + a.Aggregation
 	default:
-		log.Fatal("Aggregation type is wrong")
+		return fmt.Errorf("aggregation type: %s is wrong", a.Aggregation)
+	}
+	return nil
+}
+
+func newApp() *App {
+
+	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
+	a := App{
+		filesToUpload:   make(map[string]map[string]struct{}),
+		client:          &http.Client{},
+		lastInvoiceDate: lastInvoiceDate,
+	}
+	if err := env.Parse(&a.Config); err != nil {
+		log.Fatal(err)
 	}
 
-	switch a.Shard {
-	case "NAM", "EU", "AU", "DEV":
-	default:
-		log.Fatal("Shard is wrong")
+	if err := a.validateAppConfiguration(); err != nil {
+		log.Fatal(err)
+	}
+
+	a.client.Timeout = time.Duration(a.RequestTimeout) * time.Minute
+	a.billUploadURL = fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", a.getOptimaAPIDomain(), a.OrgID)
+
+	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
+	if a.IncludePreviousMonth {
+		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
+	}
+	// The mandatory file saving period is the period since the first day of the previous month of last invoice date
+	previousMonthOfLastInvoiceDate := lastInvoiceDate.AddDate(0, -1, 0)
+	a.mandatoryFileSavingPeriodStartDate = time.Date(previousMonthOfLastInvoiceDate.Year(), previousMonthOfLastInvoiceDate.Month(), 1, 0, 0, 0, 0, previousMonthOfLastInvoiceDate.Location())
+
+	for _, month := range a.invoiceMonths {
+		a.filesToUpload[month] = make(map[string]struct{})
 	}
 
 	return &a
