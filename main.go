@@ -114,26 +114,28 @@ type (
 	}
 
 	Config struct {
-		RefreshToken         string  `env:"REFRESH_TOKEN"`
-		ServiceClientId      string  `env:"SERVICE_APP_CLIENT_ID"`
-		ServiceClientSecret  string  `env:"SERVICE_APP_CLIENT_SECRET"`
-		OrgID                string  `env:"ORG_ID"`
-		BillConnectID        string  `env:"BILL_CONNECT_ID"`
-		Shard                string  `env:"SHARD" envDefault:"NAM"`
-		KubecostHost         string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
-		KubecostAPIPath      string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
-		Aggregation          string  `env:"AGGREGATION" envDefault:"pod"`
-		ShareNamespaces      string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
-		Idle                 bool    `env:"IDLE" envDefault:"true"`
-		IdleByNode           bool    `env:"IDLE_BY_NODE" envDefault:"false"`
-		ShareIdle            bool    `env:"SHARE_IDLE" envDefault:"false"`
-		ShareTenancyCosts    bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
-		Multiplier           float64 `env:"MULTIPLIER" envDefault:"1.0"`
-		FileRotation         bool    `env:"FILE_ROTATION" envDefault:"true"`
-		FilePath             string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		IncludePreviousMonth bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
-		RequestTimeout       int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
-		MaxFileRows          int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		RefreshToken                string  `env:"REFRESH_TOKEN"`
+		ServiceClientId             string  `env:"SERVICE_APP_CLIENT_ID"`
+		ServiceClientSecret         string  `env:"SERVICE_APP_CLIENT_SECRET"`
+		OrgID                       string  `env:"ORG_ID"`
+		BillConnectID               string  `env:"BILL_CONNECT_ID"`
+		Shard                       string  `env:"SHARD" envDefault:"NAM"`
+		KubecostHost                string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
+		KubecostAPIPath             string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		Aggregation                 string  `env:"AGGREGATION" envDefault:"pod"`
+		ShareNamespaces             string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
+		Idle                        bool    `env:"IDLE" envDefault:"true"`
+		IdleByNode                  bool    `env:"IDLE_BY_NODE" envDefault:"false"`
+		ShareIdle                   bool    `env:"SHARE_IDLE" envDefault:"false"`
+		ShareTenancyCosts           bool    `env:"SHARE_TENANCY_COSTS" envDefault:"true"`
+		Multiplier                  float64 `env:"MULTIPLIER" envDefault:"1.0"`
+		FileRotation                bool    `env:"FILE_ROTATION" envDefault:"true"`
+		FilePath                    string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
+		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		RequestTimeout              int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
+		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
+		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
+		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
 	}
 
 	App struct {
@@ -182,7 +184,6 @@ func (a *App) updateFromKubecost() {
 		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
 		reqUrl := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
 		req, err := http.NewRequest("GET", reqUrl, nil)
-		log.Printf("Request: %+v\n", reqUrl)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -198,7 +199,10 @@ func (a *App) updateFromKubecost() {
 		q.Add("shareSplit", "weighted")
 		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
 		q.Add("step", "1d")
+		q.Add("accumulate", "true")
+
 		req.URL.RawQuery = q.Encode()
+		log.Printf("Request: %+v?%s\n", reqUrl, q.Encode())
 
 		resp, err := a.client.Do(req)
 		if err != nil {
@@ -344,6 +348,8 @@ func (a *App) uploadToFlexera() {
 }
 
 func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string) (billUploadID string, err error) {
+	//Before the upload process create bill connect
+	a.createBillConnectIfNotExist(authHeaders)
 	billUpload := map[string]string{"billConnectId": a.BillConnectID, "billingPeriod": month}
 
 	billUploadJSON, _ := json.Marshal(billUpload)
@@ -389,6 +395,45 @@ func (a *App) StartBillUploadProcess(month string, authHeaders map[string]string
 	}
 
 	return jsonResponse["id"].(string), nil
+}
+
+func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
+
+	//If the flag is not enabled, do not attempt to create the bill connect
+	if !a.CreateBillConnectIfNotExist {
+		return
+	}
+
+	integrationId := "cbi-oi-kubecost"
+	//Split the billConnectId using the integrationId based on the bill identifier
+	if !strings.HasPrefix(a.BillConnectID, integrationId) {
+		log.Fatal("billConnectId does not start with the required prefix")
+	}
+	billIdentifier := strings.TrimPrefix(a.BillConnectID, integrationId+"-")
+	//Vendor name is same as display name
+	params := map[string]string{"displayName": a.VendorName, "vendorName": a.VendorName}
+
+	//name field has same value as bill identifier
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": billIdentifier, "integrationId": integrationId, "name": billIdentifier, "params": params}
+	url := fmt.Sprintf("https://api.%s/%s/%s/%s", a.getFlexeraDomain(), "finops-onboarding/v1/orgs", a.OrgID, "bill-connects/cbi")
+
+	billConnectJson, _ := json.Marshal(createBillConnectPayload)
+	response, err := a.doPost(url, string(billConnectJson), authHeaders)
+	if err != nil {
+		//When the bill connect id is not provided, abort the process
+		log.Fatalf("Error while creating the bill connect : %v", err)
+	}
+
+	switch response.StatusCode {
+	case 201:
+		log.Printf("Bill Connect Id is created %s", a.BillConnectID)
+		break
+	case 409:
+		log.Printf("Bill Connect Id already exists %s", a.BillConnectID)
+		break
+	default:
+		log.Fatalf("Error while creating the bill connect : %v", err)
+	}
 }
 
 func (a *App) CommitBillUploadProcess(billUploadID string, headers map[string]string) error {
@@ -471,12 +516,7 @@ func (a *App) doPost(url, data string, headers map[string]string) (*http.Respons
 
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken or service account.
 func (a *App) generateAccessToken() (string, error) {
-	domainsDict := map[string]string{
-		"NAM": "flexera.com",
-		"EU":  "flexera.eu",
-		"AU":  "flexera.au",
-	}
-	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", domainsDict[a.Shard])
+	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", a.getFlexeraDomain())
 	reqBody := url.Values{}
 	if len(a.RefreshToken) > 0 {
 		reqBody.Set("grant_type", "refresh_token")
@@ -599,36 +639,31 @@ func (a *App) DaysInMonth(month string) int {
 	return int(numDays)
 }
 
-func newApp() *App {
-	shardDict := map[string]string{
+func (a *App) getOptimaAPIDomain() string {
+	optimaAPIDomainsDict := map[string]string{
 		"NAM": "api.optima.flexeraeng.com",
 		"EU":  "api.optima-eu.flexeraeng.com",
 		"AU":  "api.optima-apac.flexeraeng.com",
+		"DEV": "api.optima.flexeraengdev.com",
 	}
+	return optimaAPIDomainsDict[a.Shard]
+}
 
-	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
-	a := App{
-		filesToUpload:   make(map[string]map[string]struct{}),
-		client:          &http.Client{},
-		lastInvoiceDate: lastInvoiceDate,
+func (a *App) getFlexeraDomain() string {
+	domainsDict := map[string]string{
+		"NAM": "flexera.com",
+		"EU":  "flexera.eu",
+		"AU":  "flexera.au",
+		"DEV": "flexeratest.com",
 	}
-	if err := env.Parse(&a.Config); err != nil {
-		log.Fatal(err)
-	}
+	return domainsDict[a.Shard]
+}
 
-	a.client.Timeout = time.Duration(a.RequestTimeout) * time.Minute
-	a.billUploadURL = fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", shardDict[a.Shard], a.OrgID)
-
-	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
-	if a.IncludePreviousMonth {
-		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
-	}
-	// The mandatory file saving period is the period since the first day of the previous month of last invoice date
-	previousMonthOfLastInvoiceDate := lastInvoiceDate.AddDate(0, -1, 0)
-	a.mandatoryFileSavingPeriodStartDate = time.Date(previousMonthOfLastInvoiceDate.Year(), previousMonthOfLastInvoiceDate.Month(), 1, 0, 0, 0, 0, previousMonthOfLastInvoiceDate.Location())
-
-	for _, month := range a.invoiceMonths {
-		a.filesToUpload[month] = make(map[string]struct{})
+func (a *App) validateAppConfiguration() error {
+	switch a.Shard {
+	case "NAM", "EU", "AU", "DEV":
+	default:
+		return fmt.Errorf("shard: %s is wrong", a.Shard)
 	}
 
 	a.Aggregation = strings.ToLower(a.Aggregation)
@@ -643,13 +678,40 @@ func newApp() *App {
 	case "pod":
 		a.aggregation = "cluster,namespace,controllerKind,controller,node," + a.Aggregation
 	default:
-		log.Fatal("Aggregation type is wrong")
+		return fmt.Errorf("aggregation type: %s is wrong", a.Aggregation)
+	}
+	return nil
+}
+
+func newApp() *App {
+
+	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
+	a := App{
+		filesToUpload:   make(map[string]map[string]struct{}),
+		client:          &http.Client{},
+		lastInvoiceDate: lastInvoiceDate,
+	}
+	if err := env.Parse(&a.Config); err != nil {
+		log.Fatal(err)
 	}
 
-	switch a.Shard {
-	case "NAM", "EU", "AU":
-	default:
-		log.Fatal("Shard is wrong")
+	if err := a.validateAppConfiguration(); err != nil {
+		log.Fatal(err)
+	}
+
+	a.client.Timeout = time.Duration(a.RequestTimeout) * time.Minute
+	a.billUploadURL = fmt.Sprintf("https://%s/optima/orgs/%s/billUploads", a.getOptimaAPIDomain(), a.OrgID)
+
+	a.invoiceMonths = []string{lastInvoiceDate.Format("2006-01")}
+	if a.IncludePreviousMonth {
+		a.invoiceMonths = append(a.invoiceMonths, a.lastInvoiceDate.AddDate(0, -1, 0).Format("2006-01"))
+	}
+	// The mandatory file saving period is the period since the first day of the previous month of last invoice date
+	previousMonthOfLastInvoiceDate := lastInvoiceDate.AddDate(0, -1, 0)
+	a.mandatoryFileSavingPeriodStartDate = time.Date(previousMonthOfLastInvoiceDate.Year(), previousMonthOfLastInvoiceDate.Month(), 1, 0, 0, 0, 0, previousMonthOfLastInvoiceDate.Location())
+
+	for _, month := range a.invoiceMonths {
+		a.filesToUpload[month] = make(map[string]struct{})
 	}
 
 	return &a

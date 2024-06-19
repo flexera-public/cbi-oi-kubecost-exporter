@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.15"
+  tag: "1.16"
 
 imagePullSecrets: []
 
@@ -43,6 +43,10 @@ flexera:
   billConnectId: "cbi-oi-kubecost-1"
   # -- The zone of your Flexera One account. Valid values are NAM, EU or AU.
   shard: "NAM"
+  # -- Flag to enable automatic creation of Bill Connect.
+  createBillConnectIfNotExist: "false"
+  # -- Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true.
+  vendorName: "Kubecost"
 
 kubecost:
   # -- Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local
@@ -64,7 +68,7 @@ kubecost:
   # -- Optional multiplier for costs.
   multiplier: 1.0
 
-# -- Indicates whether to delete files generated for previous months. Default is true. Note: current and previous months data is kept.
+# -- Indicates whether to delete files generated for previous months. Note: current and previous months data is kept.
 fileRotation: true
 
 # -- File path to mount persistent volume.
