@@ -115,3 +115,4 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. Recommended setting is true to prevent loss of historical data. |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size. |
 | requestTimeout | int | `5` | Indicates the timeout per each request in minutes. |
+
