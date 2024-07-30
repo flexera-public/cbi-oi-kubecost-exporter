@@ -1,5 +1,5 @@
 # Dockerfile
-FROM golang:1.21.2 as base
+FROM golang:1.22 as base
 
 RUN adduser \
   --disabled-password \
