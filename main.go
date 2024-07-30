@@ -854,7 +854,7 @@ func extractLabels(properties Properties) string {
 	}
 
 	//Map labels with cluster and namespace.
-	mapLabels["kc-provider-id"] = properties.Cluster
+	mapLabels["kc-cluster"] = properties.Cluster
 	mapLabels["kc-namespace"] = properties.Namespace
 
 	labelsJSON, _ := json.Marshal(mapLabels)
