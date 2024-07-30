@@ -854,8 +854,14 @@ func extractLabels(properties Properties) string {
 	}
 
 	//Map labels with cluster and namespace.
-	mapLabels["kc-cluster"] = properties.Cluster
-	mapLabels["kc-namespace"] = properties.Namespace
+	//Map labels with cluster and namespace.
+	if properties.Cluster != "" {
+		mapLabels["kc-cluster"] = properties.Cluster
+	}
+
+	if properties.Namespace != "" {
+		mapLabels["kc-namespace"] = properties.Namespace
+	}
 
 	labelsJSON, _ := json.Marshal(mapLabels)
 	return string(labelsJSON)
