@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.17.0
+
+-   Added labels "kc-cluster" for cluster-name, "kc-namespace" for namespace to the exported field "labels" in the CSV file.
+
 ## v1.16.0
 
 -   Allow creation of Bill Connect (if not existing) conditionally based on flag CREATE_BILL_CONNECT_IF_NOT_EXIST
