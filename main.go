@@ -854,7 +854,6 @@ func extractLabels(properties Properties) string {
 	}
 
 	//Map labels with cluster and namespace.
-	//Map labels with cluster and namespace.
 	if properties.Cluster != "" {
 		mapLabels["kc-cluster"] = properties.Cluster
 	}
