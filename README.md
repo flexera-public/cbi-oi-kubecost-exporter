@@ -133,7 +133,7 @@ After successfully installing the helm chart, you can trigger the CronJob manual
 kubectl get cronjobs -n <your-namespace>
 ```
 
-The `SCHEDULE` column should reflect the schedule you have set (default: "0 \*/6 \* \* \*"). The `NAME` column shows the name of your CronJob.
+The `SCHEDULE` column should reflect the schedule you have set (default: "0 \*/24 \* \* \*"). The `NAME` column shows the name of your CronJob.
 
 2. Manually create a job from the CronJob:
 
@@ -168,7 +168,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | activeDeadlineSeconds | int | `10800` | The maximum duration in seconds for the cron job to complete |
-| cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
+| cronSchedule | string | `"0 */24 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
 | env | object | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
 | filePath | string | `"/var/kubecost"` | File path to mount persistent volume. |
 | fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Note: current and previous months data is kept. |

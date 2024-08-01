@@ -16,7 +16,7 @@ persistentVolume:
   enabled: true
 
 # -- Setting up a cronJob scheduler to run an export task at the desired time.
-cronSchedule: "0 */6 * * *" # every 6 hours
+cronSchedule: "0 */24 * * *" # every 24 hours
 
 # -- The maximum duration in seconds for the cron job to complete
 activeDeadlineSeconds: 10800 # 3 hour
