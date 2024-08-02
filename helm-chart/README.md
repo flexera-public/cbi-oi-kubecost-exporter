@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.17.0](https://img.shields.io/badge/Version-1.17.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.17](https://img.shields.io/badge/AppVersion-1.17-informational?style=flat-square)
+![Version: 1.18.0](https://img.shields.io/badge/Version-1.18.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.18](https://img.shields.io/badge/AppVersion-1.18-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -86,7 +86,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | activeDeadlineSeconds | int | `10800` | The maximum duration in seconds for the cron job to complete |
-| cronSchedule | string | `"0 */6 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
+| cronSchedule | string | `"0 */24 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
 | env | object | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
 | filePath | string | `"/var/kubecost"` | File path to mount persistent volume. |
 | fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Note: current and previous months data is kept. |
@@ -100,7 +100,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.17"` |  |
+| image.tag | string | `"1.18"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `false` | Indicates whether to collect and export previous month. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
@@ -115,4 +115,3 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. Recommended setting is true to prevent loss of historical data. |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size. |
 | requestTimeout | int | `5` | Indicates the timeout per each request in minutes. |
-

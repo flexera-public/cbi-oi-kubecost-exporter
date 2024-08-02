@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.18.0
+
+-   Changed the default schedule of the cronJob scheduler to run an export task to - Once in every 24 hours.
+
 ## v1.17.0
 
 -   Added labels "kc-cluster" for cluster-name, "kc-namespace" for namespace to the exported field "labels" in the CSV file.
