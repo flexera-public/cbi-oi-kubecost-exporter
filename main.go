@@ -849,9 +849,6 @@ func extractLabels(properties Properties) string {
 	if properties.Pod != "" {
 		mapLabels["kc-pod-id"] = properties.Pod
 	}
-	if properties.ProviderID != "" {
-		mapLabels["kc-provider-id"] = properties.ProviderID
-	}
 
 	//Map labels with cluster and namespace.
 	if properties.Cluster != "" {
