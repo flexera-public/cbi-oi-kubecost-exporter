@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.19.0
+
+-   Removed support for the ProviderID.
+
 ## v1.18.0
 
 -   Changed the default schedule of the cronJob scheduler to run an export task to - Once in every 24 hours.

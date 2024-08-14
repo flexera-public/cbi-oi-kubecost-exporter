@@ -90,7 +90,6 @@ type (
 		Controller      string            `json:"controller"`
 		ControllerKind  string            `json:"controllerKind"`
 		Services        []string          `json:"services"`
-		ProviderID      string            `json:"providerID"`
 		Labels          map[string]string `json:"labels"`
 		NamespaceLabels map[string]string `json:"namespaceLabels"`
 	}
@@ -733,7 +732,6 @@ func (a *App) getCSVHeaders() []string {
 		"Node",
 		"Controller",
 		"ControllerKind",
-		"ProviderID",
 		"Labels",
 		"InvoiceYearMonth",
 		"InvoiceDate",
@@ -784,7 +782,6 @@ func (a *App) getCSVRows(currency string, month string, data []map[string]Kubeco
 					v.Properties.Node,
 					v.Properties.Controller,
 					v.Properties.ControllerKind,
-					v.Properties.ProviderID,
 					labels,
 					strings.ReplaceAll(month, "-", ""),
 					v.Window.Start,
@@ -826,7 +823,7 @@ func dateIter(startDate time.Time) <-chan time.Time {
 }
 
 // extractLabels returns a JSON string with all the properties labels, merging labels and namespace labels
-// and adding labels for the container, controller, pod and provider.
+// and adding labels for the container, controller, and pod.
 func extractLabels(properties Properties) string {
 	mapLabels := make(map[string]string)
 	if properties.Labels != nil {
@@ -848,9 +845,6 @@ func extractLabels(properties Properties) string {
 	}
 	if properties.Pod != "" {
 		mapLabels["kc-pod-id"] = properties.Pod
-	}
-	if properties.ProviderID != "" {
-		mapLabels["kc-provider-id"] = properties.ProviderID
 	}
 
 	//Map labels with cluster and namespace.
