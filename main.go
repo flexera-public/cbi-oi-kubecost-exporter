@@ -309,6 +309,8 @@ func (a *App) uploadToFlexera() {
 
 	authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
 
+	atLeastOneError := true
+
 	for month, files := range a.filesToUpload {
 
 		if len(files) == 0 {
@@ -343,7 +345,14 @@ func (a *App) uploadToFlexera() {
 		}
 		if err != nil {
 			log.Println(err)
+			atLeastOneError = true
 		}
+	}
+
+	//If at least one error in bill processing exit with code 1
+	if atLeastOneError {
+		//the below method internally uses os.Exit(1)
+		log.Fatal("Error during bill processing. Internal server error")
 	}
 }
 
