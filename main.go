@@ -309,7 +309,7 @@ func (a *App) uploadToFlexera() {
 
 	authHeaders := map[string]string{"Authorization": "Bearer " + accessToken}
 
-	atLeastOneError := true
+	atLeastOneError := false
 
 	for month, files := range a.filesToUpload {
 
