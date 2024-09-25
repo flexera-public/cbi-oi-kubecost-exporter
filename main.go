@@ -352,7 +352,7 @@ func (a *App) uploadToFlexera() {
 	//If at least one error in bill processing exit with code 1
 	if atLeastOneError {
 		//the below method internally uses os.Exit(1)
-		log.Fatal("Error during bill processing. Internal server error")
+		log.Fatal("Error during bill upload. Internal server error")
 	}
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.18.1
+
+-   Exit with error code 1 in case of any failure during bill upload.
+
 ## v1.18.0
 
 -   Changed the default schedule of the cronJob scheduler to run an export task to - Once in every 24 hours.
