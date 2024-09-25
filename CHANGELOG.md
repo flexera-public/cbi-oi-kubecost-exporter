@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.18.1
+## v1.19.0
 
 -   Exit with error code 1 in case of any failure during bill upload.
 
