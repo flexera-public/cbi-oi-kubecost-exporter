@@ -327,6 +327,7 @@ func (a *App) uploadToFlexera() {
 		billUploadID, err := a.StartBillUploadProcess(month, authHeaders)
 		if err != nil {
 			log.Println(err)
+			atLeastOneError = true
 			continue
 		}
 
@@ -334,6 +335,7 @@ func (a *App) uploadToFlexera() {
 			err = a.UploadFile(billUploadID, fileName, authHeaders)
 			if err != nil {
 				log.Printf("Error uploading file: %s. %s\n", fileName, err.Error())
+				atLeastOneError = true
 				break
 			}
 		}
