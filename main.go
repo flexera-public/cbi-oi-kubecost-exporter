@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caarlos0/env/v7"
+	"github.com/caarlos0/env/v11"
 )
 
 type (
