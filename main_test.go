@@ -167,7 +167,7 @@ func Test_newApp(t *testing.T) {
 		FileRotation:                true,
 		FilePath:                    "/var/kubecost",
 		KubecostAPIPath:             "/model/",
-		IncludePreviousMonth:        false,
+		IncludePreviousMonth:        true,
 		RequestTimeout:              5,
 		MaxFileRows:                 1000,
 		CreateBillConnectIfNotExist: false,
@@ -191,7 +191,7 @@ func TestApp_dateInInvoiceRange(t *testing.T) {
 		{
 			name: "success: date in range",
 			args: args{
-				includePreviousMonth: "false",
+				includePreviousMonth: "true",
 				date:                 time.Now().Local().AddDate(0, 0, -1),
 			},
 			want: true,

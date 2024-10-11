@@ -131,7 +131,7 @@ type (
 		Multiplier                  float64 `env:"MULTIPLIER" envDefault:"1.0"`
 		FileRotation                bool    `env:"FILE_ROTATION" envDefault:"true"`
 		FilePath                    string  `env:"FILE_PATH" envDefault:"/var/kubecost"`
-		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"false"`
+		IncludePreviousMonth        bool    `env:"INCLUDE_PREVIOUS_MONTH" envDefault:"true"`
 		RequestTimeout              int     `env:"REQUEST_TIMEOUT" envDefault:"5"`
 		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
 		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
