@@ -75,7 +75,7 @@ fileRotation: true
 filePath: "/var/kubecost"
 
 # -- Indicates whether to collect and export previous month.
-includePreviousMonth: false
+includePreviousMonth: true
 
 # -- Indicates the timeout per each request in minutes.
 requestTimeout: 5
