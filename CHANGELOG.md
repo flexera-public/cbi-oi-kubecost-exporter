@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.20.0
+
+-   Setting the default value of the INCLUDE_PREVIOUS_MONTH to true.
+
 ## v1.19.0
 
 -   Exit with error code 1 in case of any failure during bill upload.

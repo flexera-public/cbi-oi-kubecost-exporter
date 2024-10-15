@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.19"
+  tag: "1.20"
 
 imagePullSecrets: []
 
@@ -75,7 +75,7 @@ fileRotation: true
 filePath: "/var/kubecost"
 
 # -- Indicates whether to collect and export previous month.
-includePreviousMonth: false
+includePreviousMonth: true
 
 # -- Indicates the timeout per each request in minutes.
 requestTimeout: 5
