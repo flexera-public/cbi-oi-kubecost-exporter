@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.21.0
+
+-   Added pagination for Kubecost Allocation API requests.
+
 ## v1.20.0
 
 -   Setting the default value of the INCLUDE_PREVIOUS_MONTH to true.

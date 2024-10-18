@@ -110,6 +110,7 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("KUBECOST_API_PATH", "/model/")
 	os.Setenv("REQUEST_TIMEOUT", "5")
 	os.Setenv("MAX_FILE_ROWS", "1000")
+	os.Setenv("PAGE_SIZE", "200")
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
@@ -130,6 +131,7 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("FILE_PATH")
 		os.Unsetenv("KUBECOST_API_PATH")
 		os.Unsetenv("REQUEST_TIMEOUT")
+		os.Unsetenv("PAGE_SIZE")
 	}()
 
 	a := newApp()
@@ -172,6 +174,7 @@ func Test_newApp(t *testing.T) {
 		MaxFileRows:                 1000,
 		CreateBillConnectIfNotExist: false,
 		VendorName:                  "Kubecost",
+		PageSize:                    200,
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)
@@ -373,7 +376,14 @@ func TestApp_getCSVRows(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			a := newApp()
 
-			got := a.getCSVRows(tt.args.currency, tt.args.month, tt.args.data)
+			totalRecords := make([]KubecostAllocation, 0)
+			for _, allocation := range tt.args.data {
+				for _, record := range allocation {
+					totalRecords = append(totalRecords, record)
+				}
+			}
+
+			got := a.getCSVRows(tt.args.currency, tt.args.month, totalRecords)
 			if len(got) != len(tt.want) {
 				t.Errorf("len getCSVRows() = %v, want %v", len(got), len(tt.want))
 				return

@@ -63,6 +63,8 @@ spec:
                 value: "{{ .Values.kubecost.shareTenancyCosts }}"
               - name: MULTIPLIER
                 value: "{{ .Values.kubecost.multiplier }}"
+              - name: PAGE_SIZE
+                value: "{{ .Values.kubecost.pageSize }}"
               - name: FILE_ROTATION
                 value: "{{ .Values.fileRotation }}"
               - name: FILE_PATH

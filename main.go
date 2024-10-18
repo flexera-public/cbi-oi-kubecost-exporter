@@ -136,6 +136,7 @@ type (
 		MaxFileRows                 int     `env:"MAX_FILE_ROWS" envDefault:"1000000"`
 		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
 		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
+		PageSize                    int     `env:"PAGE_SIZE" envDefault:"500"`
 	}
 
 	App struct {
@@ -180,58 +181,86 @@ func (a *App) updateFromKubecost() {
 		}
 
 		tomorrow := d.AddDate(0, 0, 1)
+		requestNewPage := true
+		limit := a.PageSize
+		page := 0
 
-		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
-		reqUrl := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
-		req, err := http.NewRequest("GET", reqUrl, nil)
-		if err != nil {
-			log.Fatal(err)
+		allCostRecords := make([]KubecostAllocation, 0)
+		idleCostRecords := make(map[string]KubecostAllocation)
+
+		for requestNewPage {
+			// https://github.com/kubecost/docs/blob/master/allocation.md#querying
+			reqUrl := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
+			req, err := http.NewRequest("GET", reqUrl, nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			q := req.URL.Query()
+			q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
+			q.Add("aggregate", a.aggregation)
+			q.Add("idle", fmt.Sprintf("%t", a.Idle))
+			q.Add("includeIdle", fmt.Sprintf("%t", a.Idle))
+			q.Add("idleByNode", fmt.Sprintf("%t", a.IdleByNode))
+			q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
+			q.Add("shareNamespaces", a.ShareNamespaces)
+			q.Add("shareSplit", "weighted")
+			q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
+			q.Add("step", "1d")
+			q.Add("accumulate", "true")
+			q.Add("offset", fmt.Sprintf("%d", page*limit))
+			q.Add("limit", fmt.Sprintf("%d", limit))
+
+			req.URL.RawQuery = q.Encode()
+			log.Printf("Request: %+v?%s\n", reqUrl, q.Encode())
+
+			resp, err := a.client.Do(req)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("Response Status Code: %+v\n", resp.StatusCode)
+
+			var j KubecostAllocationResponse
+			err = json.NewDecoder(resp.Body).Decode(&j)
+			if err != nil {
+				log.Fatal(err)
+			}
+			resp.Body.Close()
+
+			if j.Code != http.StatusOK {
+				log.Println("Kubecost API response code different than 200, skipping")
+				continue
+			}
+
+			for _, allocation := range j.Data {
+				for id, record := range allocation {
+					if a.isIdleRecord(record) {
+						idleCostRecords[id] = record
+					} else {
+						allCostRecords = append(allCostRecords, record)
+					}
+				}
+				totalRecords := len(allocation)
+				if a.ShareIdle && totalRecords < a.PageSize || !a.ShareIdle && totalRecords < a.PageSize+1 {
+					requestNewPage = false
+				}
+			}
+
+			page++
 		}
 
-		q := req.URL.Query()
-		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
-		q.Add("aggregate", a.aggregation)
-		q.Add("idle", fmt.Sprintf("%t", a.Idle))
-		q.Add("includeIdle", fmt.Sprintf("%t", a.Idle))
-		q.Add("idleByNode", fmt.Sprintf("%t", a.IdleByNode))
-		q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
-		q.Add("shareNamespaces", a.ShareNamespaces)
-		q.Add("shareSplit", "weighted")
-		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
-		q.Add("step", "1d")
-		q.Add("accumulate", "true")
-
-		req.URL.RawQuery = q.Encode()
-		log.Printf("Request: %+v?%s\n", reqUrl, q.Encode())
-
-		resp, err := a.client.Do(req)
-		if err != nil {
-			log.Fatal(err)
+		for _, idleRecord := range idleCostRecords {
+			allCostRecords = append(allCostRecords, idleRecord)
 		}
-		log.Printf("Response Status Code: %+v\n", resp.StatusCode)
 
-		var j KubecostAllocationResponse
-		err = json.NewDecoder(resp.Body).Decode(&j)
-		if err != nil {
-			log.Fatal(err)
-		}
-		resp.Body.Close()
-
-		data := j.Data
 		monthOfData := d.Format("2006-01")
 		var csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv.gz"), d.Format("2006-01-02"))
 
-		if j.Code != http.StatusOK {
-			log.Println("Kubecost API response code different than 200, skipping")
-			continue
-		}
-
 		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
 		dataExist := false
-		for _, allocation := range j.Data {
-			if len(allocation) > 0 {
-				dataExist = true
-			}
+
+		if len(allCostRecords) > 0 {
+			dataExist = true
 		}
 
 		if dataExist == false {
@@ -254,7 +283,7 @@ func (a *App) updateFromKubecost() {
 		// Logs to validate date range requested and date range gotten in the data
 		log.Printf("Requested date range, from %s to %s \n", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z"))
 
-		for _, row := range a.getCSVRows(currency, monthOfData, data) {
+		for _, row := range a.getCSVRows(currency, monthOfData, allCostRecords) {
 			if rowCount >= a.MaxFileRows {
 				a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
 
@@ -273,6 +302,10 @@ func (a *App) updateFromKubecost() {
 		}
 		a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
 	}
+}
+
+func (a *App) isIdleRecord(record KubecostAllocation) bool {
+	return strings.Contains(record.Name, "_idle_")
 }
 
 func (a *App) closeAndSaveFile(writer *csv.Writer, zipWriter *gzip.Writer, b *bytes.Buffer, monthOfData, csvGzFile string) {
@@ -753,57 +786,56 @@ func (a *App) getCSVHeaders() []string {
 	}
 }
 
-func (a *App) getCSVRows(currency string, month string, data []map[string]KubecostAllocation) [][]string {
+func (a *App) getCSVRows(currency string, month string, data []KubecostAllocation) [][]string {
 	rows := make([][]string, 0)
 	mapDatesGotten := make(map[string]string)
-	for _, allocation := range data {
-		for id, v := range allocation {
-			mapDatesGotten[v.Start] = v.End
-			labels := extractLabels(v.Properties)
-			types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
-			vals := []float64{
-				v.CPUCost + v.CPUCostAdjustment,
-				v.GPUCost + v.GPUCostAdjustment,
-				v.RAMCost + v.RAMCostAdjustment,
-				v.PVCost + v.PVCostAdjustment,
-				v.NetworkCost + v.NetworkCostAdjustment,
-				v.SharedCost,
-				v.ExternalCost,
-				v.LoadBalancerCost + v.LoadBalancerCostAdjustment,
-			}
-			units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
-			amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
-
-			for i, c := range types {
-				multiplierFloat := a.Multiplier * vals[i]
-				if v.Properties.Cluster == "" {
-					v.Properties.Cluster = "Cluster"
-				}
-
-				rows = append(rows, []string{
-					id,
-					strconv.FormatFloat(multiplierFloat, 'f', 2, 64),
-					currency,
-					a.Aggregation,
-					c,
-					strconv.FormatFloat(amounts[i], 'f', 2, 64),
-					units[i],
-					v.Properties.Cluster,
-					v.Properties.Container,
-					v.Properties.Namespace,
-					v.Properties.Pod,
-					v.Properties.Node,
-					v.Properties.Controller,
-					v.Properties.ControllerKind,
-					v.Properties.ProviderID,
-					labels,
-					strings.ReplaceAll(month, "-", ""),
-					v.Window.Start,
-					v.Start,
-					v.End,
-				})
-			}
+	for _, v := range data {
+		mapDatesGotten[v.Start] = v.End
+		labels := extractLabels(v.Properties)
+		types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
+		vals := []float64{
+			v.CPUCost + v.CPUCostAdjustment,
+			v.GPUCost + v.GPUCostAdjustment,
+			v.RAMCost + v.RAMCostAdjustment,
+			v.PVCost + v.PVCostAdjustment,
+			v.NetworkCost + v.NetworkCostAdjustment,
+			v.SharedCost,
+			v.ExternalCost,
+			v.LoadBalancerCost + v.LoadBalancerCostAdjustment,
 		}
+		units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
+		amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
+
+		for i, c := range types {
+			multiplierFloat := a.Multiplier * vals[i]
+			if v.Properties.Cluster == "" {
+				v.Properties.Cluster = "Cluster"
+			}
+
+			rows = append(rows, []string{
+				v.Name,
+				strconv.FormatFloat(multiplierFloat, 'f', 2, 64),
+				currency,
+				a.Aggregation,
+				c,
+				strconv.FormatFloat(amounts[i], 'f', 2, 64),
+				units[i],
+				v.Properties.Cluster,
+				v.Properties.Container,
+				v.Properties.Namespace,
+				v.Properties.Pod,
+				v.Properties.Node,
+				v.Properties.Controller,
+				v.Properties.ControllerKind,
+				v.Properties.ProviderID,
+				labels,
+				strings.ReplaceAll(month, "-", ""),
+				v.Window.Start,
+				v.Start,
+				v.End,
+			})
+		}
+
 	}
 	log.Printf("Gotten dates range: %v \n", mapDatesGotten)
 	return rows

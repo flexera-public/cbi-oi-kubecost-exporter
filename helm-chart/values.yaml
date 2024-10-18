@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.20"
+  tag: "1.21"
 
 imagePullSecrets: []
 
@@ -67,6 +67,8 @@ kubecost:
   shareTenancyCosts: true
   # -- Optional multiplier for costs.
   multiplier: 1.0
+  # -- Indicates the pagination limit
+  pageSize: 500
 
 # -- Indicates whether to delete files generated for previous months. Note: current and previous months data is kept.
 fileRotation: true
