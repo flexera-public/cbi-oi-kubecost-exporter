@@ -1,5 +1,5 @@
 module cbi-oi-kubecost-exporter
 
-go 1.21
+go 1.22
 
-require github.com/caarlos0/env/v7 v7.1.0
+require github.com/caarlos0/env/v11 v11.1.0
