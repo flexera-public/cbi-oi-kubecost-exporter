@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.20.0](https://img.shields.io/badge/Version-1.20.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.20](https://img.shields.io/badge/AppVersion-1.20-informational?style=flat-square)
+![Version: 1.21.0](https://img.shields.io/badge/Version-1.21.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.21](https://img.shields.io/badge/AppVersion-1.21-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -100,7 +100,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.20"` |  |
+| image.tag | string | `"1.21"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
@@ -109,9 +109,11 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | kubecost.idle | bool | `true` | Indicates whether to include cost of idle resources. |
 | kubecost.idleByNode | bool | `false` | Indicates whether idle allocations are created on a per node basis. |
 | kubecost.multiplier | float | `1` | Optional multiplier for costs. |
+| kubecost.pageSize | int | `500` | Indicates the pagination limit |
 | kubecost.shareIdle | bool | `false` | Indicates whether allocate idle cost proportionally across non-idle resources. |
 | kubecost.shareNamespaces | string | `"kube-system,cadvisor"` | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. |
 | kubecost.shareTenancyCosts | bool | `true` | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. |
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. Recommended setting is true to prevent loss of historical data. |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size. |
 | requestTimeout | int | `5` | Indicates the timeout per each request in minutes. |
+

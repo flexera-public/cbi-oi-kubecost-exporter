@@ -182,7 +182,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.17"` |  |
+| image.tag | string | `"1.21"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true.|
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
@@ -191,6 +191,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | kubecost.idle | bool | `true` | Indicates whether to include cost of idle resources. |
 | kubecost.idleByNode | bool | `false` | Indicates whether idle allocations are created on a per node basis. |
 | kubecost.multiplier | float | `1` | Optional multiplier for costs. |
+| kubecost.pageSize | int | `500` | Indicates the pagination limit |
 | kubecost.shareIdle | bool | `false` | Indicates whether allocate idle cost proportionally across non-idle resources. |
 | kubecost.shareNamespaces | string | `"kube-system,cadvisor"` | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. |
 | kubecost.shareTenancyCosts | bool | `true` | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. |
@@ -210,6 +211,7 @@ Below are the parameters used in the Helm configuration along with the environme
 | kubecost.shareIdle | SHARE_IDLE | `shareIdle` | - | Indicates whether to allocate idle cost proportionally across non-idle resources. |
 | kubecost.shareNamespaces | SHARE_NAMESPACES | `shareNamespaces` | - | Specifies a comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. |
 | kubecost.shareTenancyCosts | SHARE_TENANCY_COSTS | `shareTenancyCosts` | - | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. |
+| kubecost.pageSize | int | `500` | Indicates the pagination limit |
 
 ## License
 
