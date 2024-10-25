@@ -352,9 +352,20 @@ func (a *App) uploadToFlexera() {
 		}
 
 		// if we try to upload files for previous month, we need to check if we have files for all days in the month
-		if !a.isCurrentMonth(month) && a.DaysInMonth(month) != len(files) {
-			log.Println("Skipping month", month, "because not all days have a file to upload")
-			continue
+		if !a.isCurrentMonth(month) {
+			// Since there may be more than one file for the same day, we must ensure that there is at least one file for each day.
+			daysToUpload := map[string]struct{}{}
+			for filename := range files {
+				matches := fileNameRe.FindStringSubmatch(filename)
+				if matches != nil && len(matches) >= 2 {
+					daysToUpload[matches[1]] = struct{}{}
+				}
+			}
+
+			if a.DaysInMonth(month) > len(daysToUpload) {
+				log.Println("Skipping month", month, "because not all days have a file to upload")
+				continue
+			}
 		}
 
 		billUploadID, err := a.StartBillUploadProcess(month, authHeaders)

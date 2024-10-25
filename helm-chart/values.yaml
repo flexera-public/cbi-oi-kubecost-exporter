@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.21"
+  tag: "1.22"
 
 imagePullSecrets: []
 
@@ -76,7 +76,7 @@ fileRotation: true
 # -- File path to mount persistent volume.
 filePath: "/var/kubecost"
 
-# -- Indicates whether to collect and export previous month.
+# -- Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true.
 includePreviousMonth: true
 
 # -- Indicates the timeout per each request in minutes.

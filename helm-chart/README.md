@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.21.0](https://img.shields.io/badge/Version-1.21.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.21](https://img.shields.io/badge/AppVersion-1.21-informational?style=flat-square)
+![Version: 1.22.0](https://img.shields.io/badge/Version-1.22.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.22](https://img.shields.io/badge/AppVersion-1.22-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -100,7 +100,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.21"` |  |
+| image.tag | string | `"1.22"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
