@@ -1,5 +1,5 @@
 # Dockerfile
-FROM golang:1.22 as base
+FROM --platform=$BUILDPLATFORM golang:1.22 as base
 
 RUN adduser \
   --disabled-password \
@@ -19,7 +19,8 @@ COPY . .
 RUN go mod download
 RUN go mod verify
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOCACHE=/tmp/go-cache go build -buildvcs=false -o ./exporter .
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GOCACHE=/tmp/go-cache go build -buildvcs=false -o ./exporter .
 
 FROM scratch
 

@@ -14,6 +14,17 @@ entries:
   - apiVersion: v2
     appVersion: "1.21"
     created: "2024-10-25T09:24:04.907259-06:00"
+    created: "2024-10-23T10:55:57.584693-06:00"
+    description: Kubecost exporter helm chart for Kubernetes
+    digest: 39c4170ce41a0c8916c661d33e16ef2cd2c6ee06dcc2e6c8c208b0223d9adf76
+    name: cbi-oi-kubecost-exporter
+    type: application
+    urls:
+    - helm-chart/cbi-oi-kubecost-exporter-1.21.1.tgz
+    version: 1.21.1
+  - apiVersion: v2
+    appVersion: "1.21"
+    created: "2024-10-23T10:55:57.584111-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 9889df72b4f9d1ea6557027558c8bbe2bad98677e73b8c250d74f9e46a3e4722
     name: cbi-oi-kubecost-exporter
