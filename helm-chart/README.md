@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.21.0](https://img.shields.io/badge/Version-1.21.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.21](https://img.shields.io/badge/AppVersion-1.21-informational?style=flat-square)
+![Version: 1.21.1](https://img.shields.io/badge/Version-1.21.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.21](https://img.shields.io/badge/AppVersion-1.21-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -102,7 +102,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
 | image.tag | string | `"1.21"` |  |
 | imagePullSecrets | list | `[]` |  |
-| includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true. |
+| includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
 | kubecost.apiPath | string | `"/model/"` | The base path for the Kubecost API endpoint. |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
