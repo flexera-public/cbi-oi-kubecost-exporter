@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.22.0
+
+- The validation to ensure we have complete data from the previous month to upload to Optima API was corrected.
+
 ## v1.21.1
 
 - Added support for multi-arch builds
