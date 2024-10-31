@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.23.0
+
+- Were added 3 new environment variables. KUBECOST_CONFIG_HOST and KUBECOST_CONFIG_API_PATH to configure a specific host and API path to get the Kubecost configuration if it is different from the one used for the Allocation API. And DEFAULT_CURRENCY, which is used when something fails while getting the Kubecost configuration.
+
 ## v1.22.0
 
 - The validation to ensure we have complete data from the previous month to upload to Optima API was corrected.

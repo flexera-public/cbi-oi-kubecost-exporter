@@ -122,6 +122,8 @@ type (
 		Shard                       string  `env:"SHARD" envDefault:"NAM"`
 		KubecostHost                string  `env:"KUBECOST_HOST" envDefault:"localhost:9090"`
 		KubecostAPIPath             string  `env:"KUBECOST_API_PATH" envDefault:"/model/"`
+		KubecostConfigHost          string  `env:"KUBECOST_CONFIG_HOST"`
+		KubecostConfigAPIPath       string  `env:"KUBECOST_CONFIG_API_PATH"`
 		Aggregation                 string  `env:"AGGREGATION" envDefault:"pod"`
 		ShareNamespaces             string  `env:"SHARE_NAMESPACES" envDefault:"kube-system,cadvisor"`
 		Idle                        bool    `env:"IDLE" envDefault:"true"`
@@ -137,6 +139,7 @@ type (
 		CreateBillConnectIfNotExist bool    `env:"CREATE_BILL_CONNECT_IF_NOT_EXIST" envDefault:"false"`
 		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
 		PageSize                    int     `env:"PAGE_SIZE" envDefault:"500"`
+		DefaultCurrency             string  `env:"DEFAULT_CURRENCY" envDefault:"USD"`
 	}
 
 	App struct {
@@ -170,10 +173,7 @@ func (a *App) updateFromKubecost() {
 		log.Fatal(err)
 	}
 
-	currency, err := a.getCurrency()
-	if err != nil {
-		log.Fatal(err)
-	}
+	currency := a.getCurrency()
 
 	for d := range dateIter(now.AddDate(0, -(len(a.invoiceMonths)), 0)) {
 		if d.After(now) || !a.dateInInvoiceRange(d) {
@@ -641,31 +641,35 @@ func (a *App) updateFileList() {
 	}
 }
 
-func (a *App) getCurrency() (string, error) {
-	reqUrl := fmt.Sprintf("http://%s%sgetConfigs", a.KubecostHost, a.KubecostAPIPath)
+func (a *App) getCurrency() string {
+	reqUrl := fmt.Sprintf("http://%s%sgetConfigs", a.KubecostConfigHost, a.KubecostConfigAPIPath)
 	resp, err := a.client.Get(reqUrl)
 	log.Printf("Request: %+v\n", reqUrl)
 	if err != nil {
-		return "", err
+		log.Printf("Something went wrong, taking default value '%s'. \n Error: %s.\n", a.DefaultCurrency, err.Error())
+		return a.DefaultCurrency
 	}
 	log.Printf("Response Status Code: %+v\n", resp.StatusCode)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "USD", nil
+		log.Printf("Unexpected http status at get config request, taking default value '%s'.\n", a.DefaultCurrency)
+		return a.DefaultCurrency
 	}
 
 	var config KubecostConfig
 	err = json.NewDecoder(resp.Body).Decode(&config)
 	if err != nil {
-		return "", err
+		log.Printf("Something went wrong during decoding, taking default value '%s'. \n Error: %s.\n", a.DefaultCurrency, err.Error())
+		return a.DefaultCurrency
 	}
 
 	if config.Data.CurrencyCode == "" {
-		return "USD", nil
+		log.Printf("Currency has no value in the config, taking default value '%s'.\n", a.DefaultCurrency)
+		return a.DefaultCurrency
 	}
 
-	return config.Data.CurrencyCode, nil
+	return config.Data.CurrencyCode
 }
 
 func (a *App) dateInInvoiceRange(date time.Time) bool {
@@ -735,6 +739,15 @@ func (a *App) validateAppConfiguration() error {
 	default:
 		return fmt.Errorf("aggregation type: %s is wrong", a.Aggregation)
 	}
+
+	if a.KubecostConfigHost == "" {
+		a.KubecostConfigHost = a.KubecostHost
+	}
+
+	if a.KubecostConfigAPIPath == "" {
+		a.KubecostConfigAPIPath = a.KubecostAPIPath
+	}
+
 	return nil
 }
 

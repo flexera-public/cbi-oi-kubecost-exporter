@@ -108,6 +108,7 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("FILE_ROTATION", "true")
 	os.Setenv("FILE_PATH", "/var/kubecost")
 	os.Setenv("KUBECOST_API_PATH", "/model/")
+	os.Setenv("KUBECOST_CONFIG_API_PATH", "/")
 	os.Setenv("REQUEST_TIMEOUT", "5")
 	os.Setenv("MAX_FILE_ROWS", "1000")
 	os.Setenv("PAGE_SIZE", "200")
@@ -132,6 +133,7 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("KUBECOST_API_PATH")
 		os.Unsetenv("REQUEST_TIMEOUT")
 		os.Unsetenv("PAGE_SIZE")
+		os.Unsetenv("KUBECOST_CONFIG_API_PATH")
 	}()
 
 	a := newApp()
@@ -159,6 +161,7 @@ func Test_newApp(t *testing.T) {
 		BillConnectID:               "test_bill_connect_id",
 		Shard:                       "NAM",
 		KubecostHost:                "test_kubecost_host",
+		KubecostConfigHost:          "test_kubecost_host",
 		Aggregation:                 "controller",
 		ShareNamespaces:             "test_namespace1,test_namespace2",
 		Idle:                        true,
@@ -169,12 +172,14 @@ func Test_newApp(t *testing.T) {
 		FileRotation:                true,
 		FilePath:                    "/var/kubecost",
 		KubecostAPIPath:             "/model/",
+		KubecostConfigAPIPath:       "/",
 		IncludePreviousMonth:        true,
 		RequestTimeout:              5,
 		MaxFileRows:                 1000,
 		CreateBillConnectIfNotExist: false,
 		VendorName:                  "Kubecost",
 		PageSize:                    200,
+		DefaultCurrency:             "USD",
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)
@@ -211,7 +216,7 @@ func TestApp_dateInInvoiceRange(t *testing.T) {
 			name: "fail: date out of range using previous month env var as false",
 			args: args{
 				includePreviousMonth: "false",
-				date:                 time.Now().Local().AddDate(0, -1, 0),
+				date:                 time.Now().Local().AddDate(0, -1, -1),
 			},
 			want: false,
 		},
@@ -474,7 +479,7 @@ func TestApp_isCurrentMonth(t *testing.T) {
 		},
 		{
 			name: "fail: previous month",
-			args: args{month: now.AddDate(0, -1, 0).Format("2006-01")},
+			args: args{month: now.AddDate(0, -1, -1).Format("2006-01")},
 			want: false,
 		},
 		{

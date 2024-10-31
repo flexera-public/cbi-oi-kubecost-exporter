@@ -2,8 +2,18 @@ apiVersion: v1
 entries:
   cbi-oi-kubecost-exporter:
   - apiVersion: v2
+    appVersion: "1.23"
+    created: "2024-10-31T14:30:01.893123-06:00"
+    description: Kubecost exporter helm chart for Kubernetes
+    digest: 100d4162d86d8eccb2c44febab2c927b330ae18a4a7132b59747dd217d4f1d5a
+    name: cbi-oi-kubecost-exporter
+    type: application
+    urls:
+    - helm-chart/cbi-oi-kubecost-exporter-1.23.0.tgz
+    version: 1.23.0
+  - apiVersion: v2
     appVersion: "1.22"
-    created: "2024-10-28T17:35:34.441188-06:00"
+    created: "2024-10-31T14:30:01.892875-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 76874f4bfe0e831163786ea51f50b195858b7c9b501a67402b746fdefdeee192
     name: cbi-oi-kubecost-exporter
@@ -13,7 +23,7 @@ entries:
     version: 1.22.0
   - apiVersion: v2
     appVersion: "1.21"
-    created: "2024-10-28T17:35:34.44094-06:00"
+    created: "2024-10-31T14:30:01.892476-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 39c4170ce41a0c8916c661d33e16ef2cd2c6ee06dcc2e6c8c208b0223d9adf76
     name: cbi-oi-kubecost-exporter
@@ -23,7 +33,7 @@ entries:
     version: 1.21.1
   - apiVersion: v2
     appVersion: "1.21"
-    created: "2024-10-28T17:35:34.440577-06:00"
+    created: "2024-10-31T14:30:01.891895-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 9889df72b4f9d1ea6557027558c8bbe2bad98677e73b8c250d74f9e46a3e4722
     name: cbi-oi-kubecost-exporter
@@ -33,7 +43,7 @@ entries:
     version: 1.21.0
   - apiVersion: v2
     appVersion: "1.20"
-    created: "2024-10-28T17:35:34.440177-06:00"
+    created: "2024-10-31T14:30:01.890658-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 739eb4727978b2a4dfcff39866da362b64346f58928abcc14deeb469a732b13b
     name: cbi-oi-kubecost-exporter
@@ -43,7 +53,7 @@ entries:
     version: 1.20.0
   - apiVersion: v2
     appVersion: "1.19"
-    created: "2024-10-28T17:35:34.439421-06:00"
+    created: "2024-10-31T14:30:01.889884-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: b21fe46b0ea4590e67e38057751252fd3d3b07926adf2c2428d7f536afb3b9d5
     name: cbi-oi-kubecost-exporter
@@ -53,7 +63,7 @@ entries:
     version: 1.19.0
   - apiVersion: v2
     appVersion: "1.18"
-    created: "2024-10-28T17:35:34.438981-06:00"
+    created: "2024-10-31T14:30:01.889352-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: a78276488d28e78b40d2c38ab00217a2eeef34920ecfd13d794030843da4985d
     name: cbi-oi-kubecost-exporter
@@ -63,7 +73,7 @@ entries:
     version: 1.18.0
   - apiVersion: v2
     appVersion: "1.17"
-    created: "2024-10-28T17:35:34.438629-06:00"
+    created: "2024-10-31T14:30:01.88901-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: d672d4fdee8ca56f97faacaef48bcb246276433512fd3e53880a5496c37d0397
     name: cbi-oi-kubecost-exporter
@@ -73,7 +83,7 @@ entries:
     version: 1.17.0
   - apiVersion: v2
     appVersion: "1.16"
-    created: "2024-10-28T17:35:34.43828-06:00"
+    created: "2024-10-31T14:30:01.888565-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 676832f616592285b1db455ed66620c0453e7f506fc7fc46bf8214abe15efd3b
     name: cbi-oi-kubecost-exporter
@@ -83,7 +93,7 @@ entries:
     version: 1.16.0
   - apiVersion: v2
     appVersion: "1.15"
-    created: "2024-10-28T17:35:34.437783-06:00"
+    created: "2024-10-31T14:30:01.88807-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 1a717c15b88f6e6fb9d4fe083ca6517eb78258b160c064c13e7804e7f659e530
     name: cbi-oi-kubecost-exporter
@@ -93,7 +103,7 @@ entries:
     version: 1.15.0
   - apiVersion: v2
     appVersion: "1.14"
-    created: "2024-10-28T17:35:34.437234-06:00"
+    created: "2024-10-31T14:30:01.88753-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 781f81b9f708f8b86cb215bd5bd5ddf7a5782195b4f0e4b85a0265b0cb35c862
     name: cbi-oi-kubecost-exporter
@@ -103,7 +113,7 @@ entries:
     version: 1.14.0
   - apiVersion: v2
     appVersion: "1.13"
-    created: "2024-10-28T17:35:34.436888-06:00"
+    created: "2024-10-31T14:30:01.887191-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: bd1994ff4b3b30c623efb05b784f3851f7cb4583479b7c670dd19316cd8a4c02
     name: cbi-oi-kubecost-exporter
@@ -113,7 +123,7 @@ entries:
     version: 1.13.0
   - apiVersion: v2
     appVersion: "1.12"
-    created: "2024-10-28T17:35:34.43656-06:00"
+    created: "2024-10-31T14:30:01.886818-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: d1bfa13ac76037b1cc9c2223826056f1da801e59d4d54348504469f4760c458e
     name: cbi-oi-kubecost-exporter
@@ -123,7 +133,7 @@ entries:
     version: 1.12.0
   - apiVersion: v2
     appVersion: "1.11"
-    created: "2024-10-28T17:35:34.436065-06:00"
+    created: "2024-10-31T14:30:01.88631-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: f12e36c016cb0b3bca7d75efd69414004c4a0f238e550f74fd13daf015305370
     name: cbi-oi-kubecost-exporter
@@ -133,7 +143,7 @@ entries:
     version: 1.11.1
   - apiVersion: v2
     appVersion: "1.11"
-    created: "2024-10-28T17:35:34.435711-06:00"
+    created: "2024-10-31T14:30:01.885892-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: a079003a1bcc3207e1c4f93653caca2234212e2bebafae7acde25a9a2d185bc5
     name: cbi-oi-kubecost-exporter
@@ -143,7 +153,7 @@ entries:
     version: 1.11.0
   - apiVersion: v2
     appVersion: "1.10"
-    created: "2024-10-28T17:35:34.435171-06:00"
+    created: "2024-10-31T14:30:01.885357-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: e7f8ac15bb87b78cc14aa3a63a2e37af9db427ad1a059621958430b8121156cd
     name: cbi-oi-kubecost-exporter
@@ -153,7 +163,7 @@ entries:
     version: 1.10.0
   - apiVersion: v2
     appVersion: 1.9.1
-    created: "2024-10-28T17:35:34.447386-06:00"
+    created: "2024-10-31T14:30:01.897185-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 773cc828783dd12211cccf149cda5b3c95e5d5bf7bf507d73559ef5f0f66f13a
     name: cbi-oi-kubecost-exporter
@@ -163,7 +173,7 @@ entries:
     version: 1.9.1
   - apiVersion: v2
     appVersion: "1.9"
-    created: "2024-10-28T17:35:34.447068-06:00"
+    created: "2024-10-31T14:30:01.896906-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 312f1c8f469adbed664530059526b69c023c017f71cc6c7b8bd9aed523ef22d6
     name: cbi-oi-kubecost-exporter
@@ -173,7 +183,7 @@ entries:
     version: 1.9.0
   - apiVersion: v2
     appVersion: "1.8"
-    created: "2024-10-28T17:35:34.446687-06:00"
+    created: "2024-10-31T14:30:01.896583-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 3fc398d0ae6d2c44c9196d262042394763fc7df49f05bd97764637a9becaad11
     name: cbi-oi-kubecost-exporter
@@ -183,7 +193,7 @@ entries:
     version: 1.8.0
   - apiVersion: v2
     appVersion: "1.7"
-    created: "2024-10-28T17:35:34.446152-06:00"
+    created: "2024-10-31T14:30:01.896198-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 90fbd649c651fa2ad66d0705aced6cbecd908206c59c135ee585ce12188cd287
     name: cbi-oi-kubecost-exporter
@@ -193,7 +203,7 @@ entries:
     version: 1.7.0
   - apiVersion: v2
     appVersion: "1.6"
-    created: "2024-10-28T17:35:34.445636-06:00"
+    created: "2024-10-31T14:30:01.895691-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: f998790d9229fce36398ef487edf6685a9a29e359dd2c78191c4d16344d47acd
     name: cbi-oi-kubecost-exporter
@@ -203,7 +213,7 @@ entries:
     version: 1.6.0
   - apiVersion: v2
     appVersion: "1.5"
-    created: "2024-10-28T17:35:34.445224-06:00"
+    created: "2024-10-31T14:30:01.895246-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: a0503a1af7b86a8f0769009de5a71a3613e8503a5f59cf86874d483f0f5f2abb
     name: cbi-oi-kubecost-exporter
@@ -213,7 +223,7 @@ entries:
     version: 1.5.0
   - apiVersion: v2
     appVersion: "1.4"
-    created: "2024-10-28T17:35:34.444713-06:00"
+    created: "2024-10-31T14:30:01.89484-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 5b296e921178d84717345be19b92a4eea0c9ca1c65410128dec596692220c8e2
     name: cbi-oi-kubecost-exporter
@@ -223,7 +233,7 @@ entries:
     version: 1.4.2
   - apiVersion: v2
     appVersion: "1.4"
-    created: "2024-10-28T17:35:34.444224-06:00"
+    created: "2024-10-31T14:30:01.894533-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: ab6992a0af9f24d5c090db71679b7f274f3576b1cfbe91325e0d6e9af317657e
     name: cbi-oi-kubecost-exporter
@@ -233,7 +243,7 @@ entries:
     version: 1.4.1
   - apiVersion: v2
     appVersion: "1.4"
-    created: "2024-10-28T17:35:34.44244-06:00"
+    created: "2024-10-31T14:30:01.894261-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 870030e989ba274f8b0f9d122a4ada24a4d29ef2c071408bf46d86e18942effd
     name: cbi-oi-kubecost-exporter
@@ -243,7 +253,7 @@ entries:
     version: 1.4.0
   - apiVersion: v2
     appVersion: "1.3"
-    created: "2024-10-28T17:35:34.442115-06:00"
+    created: "2024-10-31T14:30:01.893941-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: 0d967927bfab5f4bb6d40ce062710679e98b145c4b3f38709c0bf5d216ad8606
     name: cbi-oi-kubecost-exporter
@@ -253,7 +263,7 @@ entries:
     version: 1.3.0
   - apiVersion: v2
     appVersion: "1.2"
-    created: "2024-10-28T17:35:34.43969-06:00"
+    created: "2024-10-31T14:30:01.890156-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: d0c724c7bb085a1801e27f60ff748bc69aba14425cfd27fd132f99966692ed80
     name: cbi-oi-kubecost-exporter
@@ -263,7 +273,7 @@ entries:
     version: 1.2.0
   - apiVersion: v2
     appVersion: "1.1"
-    created: "2024-10-28T17:35:34.434523-06:00"
+    created: "2024-10-31T14:30:01.884628-06:00"
     description: Kubecost exporter helm chart for Kubernetes
     digest: c6f2681575b704b5934efea2357921896d55c4ad5e09692f31ab92b9e614cfea
     name: cbi-oi-kubecost-exporter
@@ -271,4 +281,4 @@ entries:
     urls:
     - helm-chart/cbi-oi-kubecost-exporter-1.1.0.tgz
     version: 1.1.0
-generated: "2024-10-28T17:35:34.43365-06:00"
+generated: "2024-10-31T14:30:01.883771-06:00"
