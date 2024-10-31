@@ -49,6 +49,10 @@ spec:
                 value: "{{ .Values.kubecost.host }}"
               - name: KUBECOST_API_PATH
                 value: "{{ .Values.kubecost.apiPath }}"
+              - name: KUBECOST_CONFIG_HOST
+                value: "{{ .Values.kubecost.configHost }}"
+              - name: KUBECOST_CONFIG_API_PATH
+                value: "{{ .Values.kubecost.configApiPath }}"
               - name: AGGREGATION
                 value: "{{ .Values.kubecost.aggregation }}"
               - name: SHARE_NAMESPACES
@@ -73,6 +77,8 @@ spec:
                 value: "{{ .Values.includePreviousMonth }}"
               - name: REQUEST_TIMEOUT
                 value: "{{ .Values.requestTimeout }}"
+              - name: DEFAULT_CURRENCY
+                value: "{{ .Values.defaultCurrency }}"
               - name: CREATE_BILL_CONNECT_IF_NOT_EXIST
                 value: "{{ .Values.flexera.createBillConnectIfNotExist }}"
               - name: VENDOR_NAME

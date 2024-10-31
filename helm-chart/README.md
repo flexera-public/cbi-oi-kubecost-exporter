@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.22.0](https://img.shields.io/badge/Version-1.22.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.22](https://img.shields.io/badge/AppVersion-1.22-informational?style=flat-square)
+![Version: 1.23.0](https://img.shields.io/badge/Version-1.23.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.23](https://img.shields.io/badge/AppVersion-1.23-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -87,6 +87,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 |-----|------|---------|-------------|
 | activeDeadlineSeconds | int | `10800` | The maximum duration in seconds for the cron job to complete |
 | cronSchedule | string | `"0 */24 * * *"` | Setting up a cronJob scheduler to run an export task at the desired time. |
+| defaultCurrency | string | `"USD"` | Indicates the default currency to use in case something fails while getting the currency from the kubecost configuration. |
 | env | object | `{}` | Pod environment variables. Example using envs to use proxy: {"NO_PROXY": ".svc,.cluster.local", "HTTP_PROXY": "http://proxy.example.com:80", "HTTPS_PROXY": "http://proxy.example.com:80"} |
 | filePath | string | `"/var/kubecost"` | File path to mount persistent volume. |
 | fileRotation | bool | `true` | Indicates whether to delete files generated for previous months. Note: current and previous months data is kept. |
@@ -100,11 +101,13 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.22"` |  |
+| image.tag | string | `"1.23"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
 | kubecost.apiPath | string | `"/model/"` | The base path for the Kubecost API endpoint. |
+| kubecost.configApiPath | string | `""` | The base path to get the kubecost configuration. This is an optional configuration, if not configured, the same api path value used for the allocation API is used. |
+| kubecost.configHost | string | `""` | Indicates the host to use to obtain the Kubecost configuration. This is an optional configuration, if not configured, the same host value used for the allocation API is used. |
 | kubecost.host | string | `"kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"` | Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local |
 | kubecost.idle | bool | `true` | Indicates whether to include cost of idle resources. |
 | kubecost.idleByNode | bool | `false` | Indicates whether idle allocations are created on a per node basis. |

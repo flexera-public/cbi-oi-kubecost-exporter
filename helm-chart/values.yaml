@@ -5,7 +5,7 @@
 image:
   repository: public.ecr.aws/flexera/cbi-oi-kubecost-exporter
   pullPolicy: Always
-  tag: "1.22"
+  tag: "1.23"
 
 imagePullSecrets: []
 
@@ -53,6 +53,10 @@ kubecost:
   host: "kubecost-cost-analyzer.kubecost.svc.cluster.local:9090"
   # -- The base path for the Kubecost API endpoint.
   apiPath: "/model/"
+  # -- Indicates the host to use to obtain the Kubecost configuration. This is an optional configuration, if not configured, the same host value used for the allocation API is used.
+  configHost: ""
+  # -- The base path to get the kubecost configuration. This is an optional configuration, if not configured, the same api path value used for the allocation API is used.
+  configApiPath: ""
   # -- The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod.
   aggregation: "pod"
   # -- Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations.
@@ -81,6 +85,9 @@ includePreviousMonth: true
 
 # -- Indicates the timeout per each request in minutes.
 requestTimeout: 5
+
+# -- Indicates the default currency to use in case something fails while getting the currency from the kubecost configuration.
+defaultCurrency: "USD"
 
 # -- Pod environment variables.
 # Example using envs to use proxy:
