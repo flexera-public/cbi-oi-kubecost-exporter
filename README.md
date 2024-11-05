@@ -34,21 +34,19 @@ Ensure that these values are correctly set in your configuration files to avoid 
 
 ## Authentication and Access Details
 
-To enable the Kubecost Flexera Exporter to upload cost data to Flexera One, the follow this authentication setup. A service account
-is generally recommended over a user account for stability and security in automated tasks.
+To enable the Kubecost Flexera Exporter to upload cost data to Flexera One, follow this authentication setup. Ensure you have a valid Flexera One service or user account. We recommend using a service account over a user account for more security and stability in automated tasks.
 
-1. Set Up an Account in Flexera One
+1. Set Up a Service or User Account in Flexera One
    - **Service Account (Recommended)**
-     - Follow the [Service Account Setup Guide](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account). 
-     - Copy and securely store the SERVICE_APP_CLIENT_ID and SERVICE_APP_CLIENT_SECRET; It will be required in the Kubecost
-       Flexera Exporter's configuration.
+     - Refer to the guidelines on [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account). 
+     - Copy and securely store the SERVICE_APP_CLIENT_ID and SERVICE_APP_CLIENT_SECRET; It will be required in the Kubecost Flexera Exporter's configuration.
 
    - **User Account**
      - If using a user account instead, generate a refresh token by following the [Refresh Token Guide](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm). 
      - Copy and securely store the REFRESH_TOKEN; It will be required in the Kubecost Flexera Exporter's configuration.
 
 2. Assign the Required Role
-    - The account(whether a user or service account) must be assigned with **Manage bill ingestion** role to upload and process Kubernetes cost data in Flexera One.
+    - Ensure the account(whether a user or service account) has **Manage bill ingestion** role to upload and process Kubernetes cost data in Flexera One.
     - For more details on assigning roles, refer to [Flexera IAM Access Rules](https://developer.flexera.com/docs/api/iam/v1#/Access%20Rule).
 
 ## Installation
