@@ -32,6 +32,23 @@ These parameters are specific to Kubecost's approach to handling idle costs, sha
 
 Ensure that these values are correctly set in your configuration files to avoid connectivity or functionality issues with the OpenCost service.
 
+## Authentication and Access Details
+
+To enable the Kubecost Flexera Exporter to upload cost data to Flexera One, follow this authentication setup. Ensure you have a valid Flexera One service or user account. We recommend using a service account over a user account for more security and stability in automated tasks.
+
+1. Set Up a Service or User Account in Flexera One
+   - **Service Account (Recommended)**
+     - Refer to the guidelines on [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account). 
+     - Copy and securely store the SERVICE_APP_CLIENT_ID and SERVICE_APP_CLIENT_SECRET; It will be required in the Kubecost Flexera Exporter's configuration.
+
+   - **User Account**
+     - If using a user account instead, generate a refresh token by following the [Refresh Token Guide](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm). 
+     - Copy and securely store the REFRESH_TOKEN; It will be required in the Kubecost Flexera Exporter's configuration.
+
+2. Assign the Required Role
+    - Ensure the account(whether a user or service account) has **Manage bill ingestion** role to upload and process Kubernetes cost data in Flexera One.
+    - For more details on assigning roles, refer to [Flexera IAM Access Rules](https://developer.flexera.com/docs/api/iam/v1#/Access%20Rule).
+
 ## Installation
 
 The application can be installed from golang sources, from a docker image or via the helm package manager.
