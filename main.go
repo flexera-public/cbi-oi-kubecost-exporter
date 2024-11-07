@@ -838,11 +838,11 @@ func (a *App) getCSVRows(currency string, month string, data []KubecostAllocatio
 
 			rows = append(rows, []string{
 				v.Name,
-				strconv.FormatFloat(multiplierFloat, 'f', 2, 64),
+				strconv.FormatFloat(multiplierFloat, 'f', 5, 64),
 				currency,
 				a.Aggregation,
 				c,
-				strconv.FormatFloat(amounts[i], 'f', 2, 64),
+				strconv.FormatFloat(amounts[i], 'f', 5, 64),
 				units[i],
 				v.Properties.Cluster,
 				v.Properties.Container,

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.24.0
+
+- The rounding for costs and usage is set to 5 decimals instead of 2.
+
 ## v1.23.0
 
 - Were added 3 new environment variables. KUBECOST_CONFIG_HOST and KUBECOST_CONFIG_API_PATH to configure a specific host and API path to get the Kubecost configuration if it is different from the one used for the Allocation API. And DEFAULT_CURRENCY, which is used when something fails while getting the Kubecost configuration.
