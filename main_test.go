@@ -273,7 +273,7 @@ func TestApp_getCSVRows(t *testing.T) {
                 "cpuCoreUsageAverage": 0.00664,
                 "cpuCoreHours": 0.13594,
                 "cpuCost": 0.0977,
-                "cpuCostAdjustment": -0.0235,
+                "cpuCostAdjustment": 0,
                 "cpuEfficiency": 1,
                 "gpuCount": 0,
                 "gpuHours": 0,
@@ -322,42 +322,42 @@ func TestApp_getCSVRows(t *testing.T) {
 	var expectedRows [][]string
 	expectedRows = make([][]string, 0)
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.07", "USD", "pod", "cpuCost", "0.14", "cpuCoreHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.09770", "USD", "pod", "cpuCost", "0.13594", "cpuCoreHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "gpuCost", "0.00", "gpuHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "gpuCost", "0.00000", "gpuHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.17", "USD", "pod", "ramCost", "4053048627.20", "ramByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.17120", "USD", "pod", "ramCost", "4053048627.20000", "ramByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "pvCost", "0.00", "pvByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "pvCost", "0.00000", "pvByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "networkCost", "230280247.65", "networkTransferBytes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.00004", "USD", "pod", "networkCost", "230280247.65369", "networkTransferBytes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "sharedCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.00003", "USD", "pod", "sharedCost", "1440.00000", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "externalCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "externalCost", "1440.00000", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
-		[]string{"nonprod-cluster/fish", "0.00", "USD", "pod", "loadBalancerCost", "1440.00", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
+		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "loadBalancerCost", "1440.00000", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
 			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
 			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
