@@ -140,6 +140,7 @@ type (
 		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
 		PageSize                    int     `env:"PAGE_SIZE" envDefault:"500"`
 		DefaultCurrency             string  `env:"DEFAULT_CURRENCY" envDefault:"USD"`
+		OverridePodLabels           bool    `env:"OVERRIDE_POD_LABELS" envDefault:"false"`
 	}
 
 	App struct {
@@ -815,7 +816,7 @@ func (a *App) getCSVRows(currency string, month string, data []KubecostAllocatio
 	mapDatesGotten := make(map[string]string)
 	for _, v := range data {
 		mapDatesGotten[v.Start] = v.End
-		labels := extractLabels(v.Properties)
+		labels := extractLabels(v.Properties, a.OverridePodLabels)
 		types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
 		vals := []float64{
 			v.CPUCost + v.CPUCostAdjustment,
@@ -894,14 +895,25 @@ func dateIter(startDate time.Time) <-chan time.Time {
 
 // extractLabels returns a JSON string with all the properties labels, merging labels and namespace labels
 // and adding labels for the container, controller, pod and provider.
-func extractLabels(properties Properties) string {
+func extractLabels(properties Properties, overridePodLabels bool) string {
 	mapLabels := make(map[string]string)
 	if properties.Labels != nil {
 		mapLabels = properties.Labels
 	}
 	if properties.NamespaceLabels != nil {
 		for k, v := range properties.NamespaceLabels {
-			mapLabels[k] = v
+			//Check if key is present inside the existing labels
+			_, ok := mapLabels[k]
+			//There are 2 cases. Case 1. The namespace label key exists in pod labels
+			if ok {
+				//Override the value only if the flag is set otherwise ignore the key
+				if overridePodLabels {
+					mapLabels[k] = v
+				}
+			} else {
+				//Case 2. The namespace label key do not exist in pod labels
+				mapLabels[k] = v
+			}
 		}
 	}
 	if properties.Container != "" {
