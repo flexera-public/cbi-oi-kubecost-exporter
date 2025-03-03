@@ -47,6 +47,8 @@ flexera:
   createBillConnectIfNotExist: "false"
   # -- Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true.
   vendorName: "Kubecost"
+  # -- Flag to allow overriding the podlabels with namespace labels
+  overridePodLabels: "true"
 
 kubecost:
   # -- Default kubecost-cost-analyzer service host on the current cluster. For current cluster is serviceName.namespaceName.svc.cluster.local
