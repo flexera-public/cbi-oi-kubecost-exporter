@@ -140,7 +140,7 @@ type (
 		VendorName                  string  `env:"VENDOR_NAME" envDefault:"Kubecost"`
 		PageSize                    int     `env:"PAGE_SIZE" envDefault:"500"`
 		DefaultCurrency             string  `env:"DEFAULT_CURRENCY" envDefault:"USD"`
-		OverridePodLabels           bool    `env:"OVERRIDE_POD_LABELS" envDefault:"false"`
+		OverridePodLabels           bool    `env:"OVERRIDE_POD_LABELS" envDefault:"true"`
 	}
 
 	App struct {
