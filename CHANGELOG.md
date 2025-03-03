@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.25.0
+
+- Added an environment variable OVERRIDE_POD_LABELS to allow pod label to be overwritten by the namespace label (With same key)
+
 ## v1.24.0
 
 - The rounding for costs and usage is set to 5 decimals instead of 2.
