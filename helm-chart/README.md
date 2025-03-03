@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.24.0](https://img.shields.io/badge/Version-1.24.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.24](https://img.shields.io/badge/AppVersion-1.24-informational?style=flat-square)
+![Version: 1.25.0](https://img.shields.io/badge/Version-1.25.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.25](https://img.shields.io/badge/AppVersion-1.25-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -94,6 +94,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.billConnectId | string | `"cbi-oi-kubecost-1"` | The ID of the bill connect to which to upload the data. To learn more about Bill Connect, and how to obtain your BILL_CONNECT_ID, please refer to [Creating Kubecost CBI Bill Connect](https://docs.flexera.com/flexera/EN/Optima/CreateKubecostBillConnect.htm) in the Flexera documentation. |
 | flexera.createBillConnectIfNotExist | string | `"false"` | Flag to enable automatic creation of Bill Connect. |
 | flexera.orgId | string | `""` | The ID of your Flexera One organization, please refer to [Organization ID Unique Identifier](https://docs.flexera.com/flexera/EN/FlexeraAPI/APIKeyConcepts.htm#gettingstarted_2697534192_1120261) in the Flexera documentation. |
+| flexera.overridePodLabels | string | `"true"` | Flag to allow overriding the podlabels with namespace labels |
 | flexera.refreshToken | string | `""` | The refresh token used to obtain an access token for the Flexera One API. Please refer to [Generating a Refresh Token](https://docs.flexera.com/flexera/EN/FlexeraAPI/GenerateRefreshToken.htm) in the Flexera documentation. You can provide the refresh token in two ways: 1. Directly as a string:    refreshToken: "your_token_here" 2. Reference it from a Kubernetes secret:    refreshToken:      valueFrom:        secretKeyRef:          name: flexera-secrets  # Name of the Kubernetes secret          key: refresh_token     # Key in the secret containing the refresh token |
 | flexera.serviceAppClientId | string | `""` | The service account client ID used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
 | flexera.serviceAppClientSecret | string | `""` | The service account client secret used to obtain an access token for the Flexera One API. Please refer to [Using a Service Account](https://docs.flexera.com/flexera/EN/FlexeraAPI/ServiceAccounts.htm?Highlight=service%20account) in the Flexera documentation. This parameter is incompatible with **refreshToken**, use only one of them. |
@@ -101,7 +102,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | flexera.vendorName | string | `"Kubecost"` | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true. |
 | image.pullPolicy | string | `"Always"` |  |
 | image.repository | string | `"public.ecr.aws/flexera/cbi-oi-kubecost-exporter"` |  |
-| image.tag | string | `"1.24"` |  |
+| image.tag | string | `"1.25"` |  |
 | imagePullSecrets | list | `[]` |  |
 | includePreviousMonth | bool | `true` | Indicates whether to collect and export previous month data. Default is true. Setting this flag to false will prevent collecting and uploading the data from previous month and only upload data for the current month. Partial Data (i.e. missing data for some days) for previous month will not be uploaded even if the flag value is set to true. |
 | kubecost.aggregation | string | `"pod"` | The level of granularity to use when aggregating the cost data. Valid values are namespace, controller, node, or pod. |
