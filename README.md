@@ -88,7 +88,7 @@ The app is configured using environment variables defined in a .env file. The fo
 | MULTIPLIER | Optional multiplier for costs. Default is 1.                                                                                                                                                                                                                                                                                           |
 | CREATE_BILL_CONNECT_IF_NOT_EXIST | Flag to enable automatic creation of Bill Connect. Default is false.                                                                                                                                                                                                                                                                                           |
 | VENDOR_NAME | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost".      |
-| OVERRIDE_POD_LABELS | Flag to allow overriding pod labels with namespace laels. Default is true.      |
+| OVERRIDE_POD_LABELS | Flag to allow overriding pod labels with namespace labels. Default value is true.      |
 
 #### Execution
 
