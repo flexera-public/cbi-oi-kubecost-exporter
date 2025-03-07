@@ -903,6 +903,7 @@ func extractLabels(properties Properties, overridePodLabels bool) string {
 	if properties.NamespaceLabels != nil {
 		for k, v := range properties.NamespaceLabels {
 			//Check if key is present inside the existing labels
+			//If the key is present and override is set to true, only then reset the label
 			if _, ok := mapLabels[k]; !ok || overridePodLabels {
 				mapLabels[k] = v
 			}
