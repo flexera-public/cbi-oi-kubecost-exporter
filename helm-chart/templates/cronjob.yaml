@@ -83,6 +83,8 @@ spec:
                 value: "{{ .Values.flexera.createBillConnectIfNotExist }}"
               - name: VENDOR_NAME
                 value: "{{ .Values.flexera.vendorName }}"
+              - name: OVERRIDE_POD_LABELS
+                value: "{{ .Values.flexera.overridePodLabels }}"
               {{- range $key, $val := .Values.env }}
               - name: {{ $key }}
                 value: {{ $val | quote }}

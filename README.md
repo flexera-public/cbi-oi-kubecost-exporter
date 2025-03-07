@@ -87,7 +87,8 @@ The app is configured using environment variables defined in a .env file. The fo
 | SHARE_TENANCY_COSTS | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. Default is true.                                                                                                                                                                                                                     |
 | MULTIPLIER | Optional multiplier for costs. Default is 1.                                                                                                                                                                                                                                                                                           |
 | CREATE_BILL_CONNECT_IF_NOT_EXIST | Flag to enable automatic creation of Bill Connect. Default is false.                                                                                                                                                                                                                                                                                           |
-| VENDOR_NAME | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost".                                                                                                                                                                                                                                                                                           |
+| VENDOR_NAME | Vendor name for the Bill Connect. It is used when CREATE_BILL_CONNECT_IF_NOT_EXIST is set to true . Default value is "Kubecost".      |
+| OVERRIDE_POD_LABELS | Flag to allow overriding pod labels with namespace labels. Default value is true.      |
 
 #### Execution
 
@@ -110,6 +111,7 @@ helm install kubecost-exporter cbi-oi-kubecost-exporter \
     --set flexera.refreshToken="Ek-aGVsbUBrdWJlY29zdC5jb20..." \
     --set flexera.orgId="1105" \
     --set flexera.createBillConnectIfNotExist="true" \
+    --set flexera.overridePodLabels="false" \
     --set flexera.vendorName="test-vendor" \
     --set flexera.billConnectId="cbi-oi-kubecost-..." \
     ...
@@ -125,6 +127,7 @@ flexera:
     orgId: '1105'
     billConnectId: 'cbi-oi-kubecost-...'
     createBillConnectIfNotExist: 'true'
+    overridePodLabels: 'false'
     vendorName: 'test-vendor'
 
 kubecost:

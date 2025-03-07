@@ -21,6 +21,36 @@ func Test_dateIter(t *testing.T) {
 	}
 }
 
+func Test_extractLabelsWithOverride(t *testing.T) {
+	type args struct {
+		properties Properties
+	}
+	tests := []struct {
+		name           string
+		args           args
+		expextedLabels string
+	}{
+		{
+			name: "success: with labels and some namespace labels repeated",
+			args: args{
+				properties: Properties{
+					Labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
+					NamespaceLabels: map[string]string{"label1": "us-east-1a-ns", "label3": "us-weast-1a"},
+				},
+			},
+			expextedLabels: "{\"label1\":\"us-east-1a-ns\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractLabels(tt.args.properties, true)
+			if !reflect.DeepEqual(got, tt.expextedLabels) {
+				t.Errorf("extractLabels() got = %v, want %v", got, tt.expextedLabels)
+			}
+		})
+	}
+}
+
 func Test_extractLabels(t *testing.T) {
 	type args struct {
 		properties Properties
@@ -54,7 +84,7 @@ func Test_extractLabels(t *testing.T) {
 			args: args{
 				properties: Properties{
 					Labels:          map[string]string{"label1": "us-east-1a", "label2": "us-east-1a"},
-					NamespaceLabels: map[string]string{"label1": "us-east-1a", "label3": "us-weast-1a"},
+					NamespaceLabels: map[string]string{"label1": "us-east-1a-ns", "label3": "us-weast-1a"},
 				},
 			},
 			expextedLabels: "{\"label1\":\"us-east-1a\",\"label2\":\"us-east-1a\",\"label3\":\"us-weast-1a\"}",
@@ -82,7 +112,7 @@ func Test_extractLabels(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractLabels(tt.args.properties)
+			got := extractLabels(tt.args.properties, false)
 			if !reflect.DeepEqual(got, tt.expextedLabels) {
 				t.Errorf("extractLabels() got = %v, want %v", got, tt.expextedLabels)
 			}
@@ -112,6 +142,7 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("REQUEST_TIMEOUT", "5")
 	os.Setenv("MAX_FILE_ROWS", "1000")
 	os.Setenv("PAGE_SIZE", "200")
+	os.Setenv("OVERRIDE_POD_LABELS", "false")
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
@@ -134,6 +165,7 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("REQUEST_TIMEOUT")
 		os.Unsetenv("PAGE_SIZE")
 		os.Unsetenv("KUBECOST_CONFIG_API_PATH")
+		os.Unsetenv("OVERRIDE_POD_LABELS")
 	}()
 
 	a := newApp()
@@ -180,6 +212,7 @@ func Test_newApp(t *testing.T) {
 		VendorName:                  "Kubecost",
 		PageSize:                    200,
 		DefaultCurrency:             "USD",
+		OverridePodLabels:           false,
 	}
 	if !reflect.DeepEqual(a.Config, expectedConfig) {
 		t.Errorf("Config is %+v, expected %+v", a.Config, expectedConfig)
