@@ -903,15 +903,7 @@ func extractLabels(properties Properties, overridePodLabels bool) string {
 	if properties.NamespaceLabels != nil {
 		for k, v := range properties.NamespaceLabels {
 			//Check if key is present inside the existing labels
-			_, ok := mapLabels[k]
-			//There are 2 cases. Case 1. The namespace label key exists in pod labels
-			if ok {
-				//Override the value only if the flag is set otherwise ignore the key
-				if overridePodLabels {
-					mapLabels[k] = v
-				}
-			} else {
-				//Case 2. The namespace label key do not exist in pod labels
+			if _, ok := mapLabels[k]; !ok || overridePodLabels {
 				mapLabels[k] = v
 			}
 		}
