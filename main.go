@@ -160,6 +160,7 @@ var fileNameRe = regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.cs
 
 func main() {
 	exporter := newApp()
+	log.Printf("The value of labels: %v \n", exporter.OverridePodLabels)
 	exporter.updateFileList()
 	exporter.updateFromKubecost()
 	exporter.uploadToFlexera()
