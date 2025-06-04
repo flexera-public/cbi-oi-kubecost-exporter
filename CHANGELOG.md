@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.26.0
+
+- Adds label "kc-controller-kind" to exported fields in the CSV file
+
 ## v1.25.0
 
 - Added an environment variable OVERRIDE_POD_LABELS to allow pod label to be overwritten by the namespace label (With same key)
