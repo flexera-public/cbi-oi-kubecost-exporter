@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.26.0
+
+- Implemented streaming processing to optimize memory usage for large Kubernetes clusters
+
 ## v1.25.0
 
 - Added an environment variable OVERRIDE_POD_LABELS to allow pod label to be overwritten by the namespace label (With same key)
