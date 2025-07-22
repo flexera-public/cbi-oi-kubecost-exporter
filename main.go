@@ -1015,6 +1015,9 @@ func extractLabels(properties Properties, overridePodLabels bool) string {
 	if properties.Controller != "" {
 		mapLabels["kc-controller"] = properties.Controller
 	}
+	if properties.ControllerKind != "" {
+		mapLabels["kc-controller-kind"] = properties.ControllerKind
+	}
 	if properties.Node != "" {
 		mapLabels["kc-node"] = properties.Node
 	}

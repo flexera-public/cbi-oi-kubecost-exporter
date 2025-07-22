@@ -3,6 +3,7 @@
 ## v1.26.0
 
 - Implemented streaming processing to optimize memory usage for large Kubernetes clusters
+- Adds label "kc-controller-kind" to exported fields in the CSV file
 
 ## v1.25.0
 
