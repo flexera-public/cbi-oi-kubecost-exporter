@@ -500,7 +500,7 @@ func TestApp_getCSVRowsFromRecord(t *testing.T) {
 		SharedCost:                 0.00003,
 	}
 
-	expectedLabels := "{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}"
+	expectedLabels := "{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-controller-kind\":\"deployment\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}"
 
 	var expectedRows [][]string
 	expectedRows = append(expectedRows,

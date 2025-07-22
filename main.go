@@ -16,7 +16,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -169,23 +168,7 @@ type (
 var uuidPattern = regexp.MustCompile(`an existing billUpload \(ID: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`)
 var fileNameRe = regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.csv(\.gz)?`)
 
-func startMemoryMonitor() {
-	go func() {
-		for {
-			var m runtime.MemStats
-			runtime.ReadMemStats(&m)
-
-			log.Printf("Memory: %.2f MB allocated, %.2f MB system",
-				float64(m.Alloc)/1024/1024,
-				float64(m.Sys)/1024/1024)
-
-			time.Sleep(1 * time.Second)
-		}
-	}()
-}
-
 func main() {
-	startMemoryMonitor()
 	exporter := newApp()
 	exporter.updateFileList()
 	exporter.updateFromKubecost()
