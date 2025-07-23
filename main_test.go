@@ -56,14 +56,10 @@ func Test_extractLabelsWithOverride(t *testing.T) {
 
 func TestFileWriter_CompleteWorkflow(t *testing.T) {
 	a := newApp()
-
-	fw := &FileWriter{
-		filePath: "/tmp/test_complete_workflow.csv.gz",
-		maxRows:  5, // Small limit to test rotation
-	}
-	err := fw.initFile()
+	a.MaxFileRows = 5
+	fw, err := newFileWriter(a, "/tmp/test_complete_workflow.csv.gz")
 	if err != nil {
-		t.Fatalf("initFile() error = %v", err)
+		t.Fatalf("newFileWriter() error = %v", err)
 	}
 	defer fw.close()
 
@@ -96,10 +92,11 @@ func TestFileWriter_CompleteWorkflow(t *testing.T) {
 		}
 	}
 
-	// Finalize the current file
-	fw.finalizeFile(monthOfData, filesToUpload)
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
 
-	// Should have created multiple files due to rotation
 	if len(filesToUpload[monthOfData]) < 2 {
 		t.Errorf("Expected at least 2 files due to rotation, got %d", len(filesToUpload[monthOfData]))
 	}
@@ -159,18 +156,15 @@ func TestFileWriter_CompleteWorkflow(t *testing.T) {
 }
 
 func TestFileWriter_GzipIntegrity(t *testing.T) {
-	fw := &FileWriter{
-		filePath: "/tmp/test_gzip_integrity.csv.gz",
-	}
-	err := fw.initFile()
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_gzip_integrity.csv.gz")
 	if err != nil {
-		t.Fatalf("initFile() error = %v", err)
+		t.Fatalf("newFileWriter() error = %v", err)
 	}
 
-	// Write some test data
-	fw.writeHeaders([]string{"col1", "col2", "col3"})
-	for i := 0; i < 100; i++ {
-		fw.writer.Write([]string{fmt.Sprintf("val%d", i), fmt.Sprintf("val%d", i+1), fmt.Sprintf("val%d", i+2)})
+	err = fw.writeHeaders([]string{"col1", "col2", "col3"})
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
 	}
 
 	monthOfData := "2023-10"
@@ -178,9 +172,19 @@ func TestFileWriter_GzipIntegrity(t *testing.T) {
 		monthOfData: make(map[string]struct{}),
 	}
 
-	fw.finalizeFile(monthOfData, filesToUpload)
+	for i := 0; i < 100; i++ {
+		row := []string{fmt.Sprintf("val%d", i), fmt.Sprintf("val%d", i+1), fmt.Sprintf("val%d", i+2)}
+		err = fw.writeRow(row, monthOfData, filesToUpload)
+		if err != nil {
+			t.Errorf("writeRow() error = %v", err)
+		}
+	}
 
-	// Read the file and verify gzip integrity
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
+
 	fileData, err := os.ReadFile(fw.filePath)
 	if err != nil {
 		t.Errorf("failed to read file: %v", err)
@@ -723,39 +727,39 @@ func TestGetMD5FromFileBytes(t *testing.T) {
 	}
 }
 
-func TestFileWriter_initFile(t *testing.T) {
-	fw := &FileWriter{
-		filePath:  "/tmp/test.csv.gz",
-		maxRows:   1000,
-		fileIndex: 1,
-	}
-
-	err := fw.initFile()
+func TestFileWriter_NewFileWriter(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test.csv.gz")
 	if err != nil {
-		t.Errorf("initFile() error = %v", err)
+		t.Errorf("newFileWriter() error = %v", err)
 	}
+	defer fw.close()
 
-	if fw.buffer == nil {
-		t.Error("buffer should be initialized")
+	if fw.file == nil {
+		t.Error("file should be initialized")
+	}
+	if fw.bufferedFile == nil {
+		t.Error("bufferedFile should be initialized")
 	}
 	if fw.zipWriter == nil {
 		t.Error("zipWriter should be initialized")
 	}
-	if fw.writer == nil {
-		t.Error("writer should be initialized")
+	if fw.csvWriter == nil {
+		t.Error("csvWriter should be initialized")
 	}
 	if fw.rowCount != 0 {
 		t.Errorf("rowCount should be 0, got %d", fw.rowCount)
 	}
-
-	fw.close()
+	if fw.fileIndex != 1 {
+		t.Errorf("fileIndex should be 1, got %d", fw.fileIndex)
+	}
 }
 
 func TestFileWriter_writeHeaders(t *testing.T) {
-	fw := &FileWriter{}
-	err := fw.initFile()
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_headers.csv.gz")
 	if err != nil {
-		t.Fatalf("initFile() error = %v", err)
+		t.Fatalf("newFileWriter() error = %v", err)
 	}
 	defer fw.close()
 
@@ -767,12 +771,11 @@ func TestFileWriter_writeHeaders(t *testing.T) {
 }
 
 func TestFileWriter_writeRow(t *testing.T) {
-	fw := &FileWriter{
-		maxRows: 2,
-	}
-	err := fw.initFile()
+	a := newApp()
+	a.MaxFileRows = 2
+	fw, err := newFileWriter(a, "/tmp/test_writerow.csv.gz")
 	if err != nil {
-		t.Fatalf("initFile() error = %v", err)
+		t.Fatalf("newFileWriter() error = %v", err)
 	}
 	defer fw.close()
 
@@ -803,24 +806,32 @@ func TestFileWriter_writeRow(t *testing.T) {
 }
 
 func TestFileWriter_finalizeFile(t *testing.T) {
-	fw := &FileWriter{
-		filePath: "/tmp/test_finalize.csv.gz",
-	}
-	err := fw.initFile()
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_finalize.csv.gz")
 	if err != nil {
-		t.Fatalf("initFile() error = %v", err)
+		t.Fatalf("newFileWriter() error = %v", err)
 	}
 
-	fw.writeHeaders([]string{"col1", "col2"})
-	fw.writer.Write([]string{"val1", "val2"})
-	fw.rowCount = 1
+	err = fw.writeHeaders([]string{"col1", "col2"})
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
 
 	monthOfData := "2023-10"
 	filesToUpload := map[string]map[string]struct{}{
 		monthOfData: make(map[string]struct{}),
 	}
 
-	fw.finalizeFile(monthOfData, filesToUpload)
+	row := []string{"val1", "val2"}
+	err = fw.writeRow(row, monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("writeRow() error = %v", err)
+	}
+
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
 
 	if _, exists := filesToUpload[monthOfData][fw.filePath]; !exists {
 		t.Error("file should be added to filesToUpload")
@@ -904,15 +915,11 @@ func TestApp_isIdleRecord(t *testing.T) {
 }
 
 func TestFileWriter_rotateFile(t *testing.T) {
-	fw := &FileWriter{
-		filePath:  "/tmp/test_rotate.csv.gz",
-		maxRows:   2,
-		fileIndex: 1,
-	}
-
-	err := fw.initFile()
+	a := newApp()
+	a.MaxFileRows = 2
+	fw, err := newFileWriter(a, "/tmp/test_rotate.csv.gz")
 	if err != nil {
-		t.Fatalf("initFile() error = %v", err)
+		t.Fatalf("newFileWriter() error = %v", err)
 	}
 
 	monthOfData := "2023-10"
@@ -921,23 +928,20 @@ func TestFileWriter_rotateFile(t *testing.T) {
 	}
 
 	originalPath := fw.filePath
+	originalIndex := fw.fileIndex
 
 	err = fw.rotateFile(monthOfData, filesToUpload)
 	if err != nil {
 		t.Errorf("rotateFile() error = %v", err)
 	}
 
-	if fw.fileIndex != 2 {
-		t.Errorf("fileIndex should be 2, got %d", fw.fileIndex)
+	if fw.fileIndex != originalIndex+1 {
+		t.Errorf("fileIndex should be %d, got %d", originalIndex+1, fw.fileIndex)
 	}
 
 	expectedNewPath := "/tmp/test_rotate-2.csv.gz"
 	if fw.filePath != expectedNewPath {
 		t.Errorf("filePath should be %s, got %s", expectedNewPath, fw.filePath)
-	}
-
-	if _, exists := filesToUpload[monthOfData][originalPath]; !exists {
-		t.Error("original file should be added to filesToUpload")
 	}
 
 	fw.close()
@@ -952,20 +956,62 @@ func TestApp_cleanupOldFiles(t *testing.T) {
 	currentDate := "2023-10-15"
 
 	a.filesToUpload[monthOfData] = map[string]struct{}{
-		fmt.Sprintf("/tmp/kubecost-%s.csv.gz", currentDate):     {},
-		fmt.Sprintf("/tmp/kubecost-%s-2.csv.gz", currentDate):   {},
-		fmt.Sprintf("/tmp/kubecost-%s-old.csv.gz", currentDate): {},
-		"/tmp/kubecost-2023-10-14.csv.gz":                       {},
+		fmt.Sprintf("/tmp/kubecost-%s.csv.gz", currentDate):   {},
+		fmt.Sprintf("/tmp/kubecost-%s-2.csv.gz", currentDate): {},
+		fmt.Sprintf("/tmp/kubecost-%s-3.csv.gz", currentDate): {},
+		"/tmp/kubecost-2023-10-14.csv.gz":                     {},
 	}
 
 	a.cleanupOldFiles(monthOfData, currentDate)
 
 	expectedFiles := map[string]struct{}{
-		fmt.Sprintf("/tmp/kubecost-%s.csv.gz", currentDate): {},
-		"/tmp/kubecost-2023-10-14.csv.gz":                   {},
+		"/tmp/kubecost-2023-10-14.csv.gz": {},
 	}
 
 	if !reflect.DeepEqual(a.filesToUpload[monthOfData], expectedFiles) {
 		t.Errorf("cleanupOldFiles() failed, expected %v, got %v", expectedFiles, a.filesToUpload[monthOfData])
 	}
+}
+
+func Test_quickValidateGzipHeaders(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_validate.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	err = fw.writeHeaders([]string{"col1", "col2"})
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	row := []string{"val1", "val2"}
+	err = fw.writeRow(row, monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("writeRow() error = %v", err)
+	}
+
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
+
+	err = validateGzipHeaders(fw.filePath)
+	if err != nil {
+		t.Errorf("quickValidateGzipHeaders() should pass for valid gzip file: %v", err)
+	}
+
+	os.WriteFile("/tmp/invalid.csv.gz", []byte("not gzip content"), 0644)
+	err = validateGzipHeaders("/tmp/invalid.csv.gz")
+	if err == nil {
+		t.Error("quickValidateGzipHeaders() should fail for invalid gzip file")
+	}
+
+	defer os.Remove(fw.filePath)
+	defer os.Remove("/tmp/invalid.csv.gz")
 }

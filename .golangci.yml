@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - gosec
+    - revive
+
+  exclusions:
+    rules:
+      # Ignore gosec in test files
+      - linters:
+          - gosec
+        path: _test\.go
+      # Ignore specific gosec rules
+      - linters:
+          - gosec
+        text: "G204:"

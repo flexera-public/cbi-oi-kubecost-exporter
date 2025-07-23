@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
 	"crypto/md5"
-	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -18,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -145,6 +143,7 @@ type (
 
 	App struct {
 		Config
+		lockFile                           *os.File
 		aggregation                        string
 		filesToUpload                      map[string]map[string]struct{}
 		client                             *http.Client
@@ -153,23 +152,18 @@ type (
 		mandatoryFileSavingPeriodStartDate time.Time
 		billUploadURL                      string
 	}
-
-	FileWriter struct {
-		writer    *csv.Writer
-		zipWriter *gzip.Writer
-		buffer    *bytes.Buffer
-		filePath  string
-		rowCount  int
-		fileIndex int
-		maxRows   int
-	}
 )
+
+const lockFileName = ".kubecost-exporter.lock"
 
 var uuidPattern = regexp.MustCompile(`an existing billUpload \(ID: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`)
 var fileNameRe = regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.csv(\.gz)?`)
 
 func main() {
 	exporter := newApp()
+	exporter.lockState()
+	defer exporter.unlockState()
+	exporter.cleanupTempFiles()
 	exporter.updateFileList()
 	exporter.updateFromKubecost()
 	exporter.uploadToFlexera()
@@ -198,32 +192,30 @@ func (a *App) updateFromKubecost() {
 		}
 	}
 }
-
 func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 	tomorrow := d.AddDate(0, 0, 1)
+	currentDate := d.Format("2006-01-02")
 	monthOfData := d.Format("2006-01")
 
-	fileWriter := &FileWriter{
-		filePath:  fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv.gz"), d.Format("2006-01-02")),
-		maxRows:   a.MaxFileRows,
-		fileIndex: 1,
-	}
-
-	err := fileWriter.initFile()
+	fileWriter, err := newFileWriter(a, fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv.gz"), currentDate))
 	if err != nil {
-		return fmt.Errorf("failed to initialize file: %v", err)
+		return fmt.Errorf("failed to create file writer: %v", err)
 	}
 	defer fileWriter.close()
 
-	fileWriter.writeHeaders(a.getCSVHeaders())
+	err = fileWriter.writeHeaders(a.getCSVHeaders())
+	if err != nil {
+		return fmt.Errorf("failed to write headers: %v", err)
+	}
 
 	page := 0
 	limit := a.PageSize
 	requestNewPage := true
 	totalRecordsProcessed := 0
+	totalRowsProcessed := 0
 	idleRecords := make(map[string]KubecostAllocation)
 
-	log.Printf("Starting streaming processing for date %s", d.Format("2006-01-02"))
+	log.Printf("Starting streaming processing for date %s", currentDate)
 
 	for requestNewPage {
 		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
@@ -270,7 +262,12 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 
 		pageRecordsProcessed := 0
 
-		for _, allocation := range j.Data {
+		for k, allocation := range j.Data {
+			if page == 0 && k == 0 && len(allocation) > 0 {
+				log.Printf("Kubecost returned data for %s, cleaning up old indexed files", currentDate)
+				a.cleanupOldFiles(monthOfData, currentDate)
+			}
+
 			for id, record := range allocation {
 				if a.isIdleRecord(record) {
 					idleRecords[id] = record
@@ -281,6 +278,7 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 						if err != nil {
 							return err
 						}
+						totalRowsProcessed++
 					}
 					pageRecordsProcessed++
 				}
@@ -299,7 +297,11 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 	for _, record := range idleRecords {
 		rows := a.getCSVRowsFromRecord(currency, monthOfData, record)
 		for _, row := range rows {
-			fileWriter.writeRow(row, monthOfData, a.filesToUpload)
+			err := fileWriter.writeRow(row, monthOfData, a.filesToUpload)
+			if err != nil {
+				return err
+			}
+			totalRowsProcessed++
 		}
 	}
 	totalRecordsProcessed += len(idleRecords)
@@ -307,115 +309,43 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 
 	// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
 	if totalRecordsProcessed == 0 {
-		log.Printf("No data for date %s, removing empty file", d.Format("2006-01-02"))
-		fileWriter.close()
-		os.Remove(fileWriter.filePath)
+		log.Printf("No data for date %s, removing empty file", currentDate)
 		return nil
 	}
 
-	fileWriter.finalizeFile(monthOfData, a.filesToUpload)
-	// delete previous files for this day, except for the current one, in case there are fewer files than on the disk
-	a.cleanupOldFiles(monthOfData, d.Format("2006-01-02"))
-
-	// Logs to validate date range requested and date range gotten in the data
-	log.Printf("Completed processing for %s: %d total records", d.Format("2006-01-02"), totalRecordsProcessed)
-	return nil
-}
-
-func (fw *FileWriter) initFile() error {
-	fw.buffer = new(bytes.Buffer)
-	fw.zipWriter = gzip.NewWriter(fw.buffer)
-	fw.writer = csv.NewWriter(fw.zipWriter)
-	fw.rowCount = 0
-	return nil
-}
-
-func (fw *FileWriter) writeHeaders(headers []string) error {
-	return fw.writer.Write(headers)
-}
-
-func (fw *FileWriter) writeRow(row []string, monthOfData string, filesToUpload map[string]map[string]struct{}) error {
-	if fw.rowCount >= fw.maxRows {
-		err := fw.rotateFile(monthOfData, filesToUpload)
-		if err != nil {
-			return err
-		}
-		// Write headers to the new file after rotation
-		if fw.writer != nil {
-			err = fw.writer.Write([]string{
-				"ResourceID", "Cost", "CurrencyCode", "Aggregation", "UsageType", "UsageAmount", "UsageUnit",
-				"Cluster", "Container", "Namespace", "Pod", "Node", "Controller", "ControllerKind",
-				"ProviderID", "Labels", "InvoiceYearMonth", "InvoiceDate", "StartTime", "EndTime",
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	err := fw.writer.Write(row)
+	err = fileWriter.finalizeFile(monthOfData, a.filesToUpload)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to finalize file: %v", err)
 	}
 
-	fw.rowCount++
+	if err := validateGzipHeaders(fileWriter.filePath); err != nil {
+		log.Printf("Warning: file failed validation: %v", err)
+	}
+
+	log.Printf("Completed processing for %s: %d total records, %d data rows", currentDate, totalRecordsProcessed, totalRowsProcessed)
 	return nil
-}
-
-func (fw *FileWriter) rotateFile(monthOfData string, filesToUpload map[string]map[string]struct{}) error {
-	fw.finalizeFile(monthOfData, filesToUpload)
-
-	fw.fileIndex++
-	fw.filePath = fmt.Sprintf("%s-%d.csv.gz", strings.TrimSuffix(fw.filePath, ".csv.gz"), fw.fileIndex)
-
-	err := fw.initFile()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (fw *FileWriter) finalizeFile(monthOfData string, filesToUpload map[string]map[string]struct{}) {
-	if fw.writer != nil {
-		fw.writer.Flush()
-	}
-	if fw.zipWriter != nil {
-		fw.zipWriter.Flush()
-		fw.zipWriter.Close()
-	}
-
-	if fw.buffer != nil && fw.buffer.Len() > 0 {
-		err := os.WriteFile(fw.filePath, fw.buffer.Bytes(), 0644)
-		if err != nil {
-			log.Printf("Error writing file %s: %v", fw.filePath, err)
-		} else {
-			if filesToUpload[monthOfData] == nil {
-				filesToUpload[monthOfData] = make(map[string]struct{})
-			}
-			filesToUpload[monthOfData][fw.filePath] = struct{}{}
-			log.Printf("Generated file: %s (%d rows)", fw.filePath, fw.rowCount)
-		}
-	}
-}
-
-func (fw *FileWriter) close() {
-	if fw.writer != nil {
-		fw.writer.Flush()
-	}
-	if fw.zipWriter != nil {
-		fw.zipWriter.Close()
-	}
 }
 
 func (a *App) cleanupOldFiles(monthOfData, currentDate string) {
-	matches := fileNameRe.FindStringSubmatch(filepath.Base(path.Join(a.FilePath, fmt.Sprintf("kubecost-%s.csv.gz", currentDate))))
-	if len(matches) >= 3 && len(matches[2]) == 0 { // filename without index
-		for filename := range a.filesToUpload[monthOfData] {
-			if strings.Contains(filename, currentDate) && !strings.HasSuffix(filename, fmt.Sprintf("kubecost-%s.csv.gz", currentDate)) {
-				_ = os.Remove(filename)
-				delete(a.filesToUpload[monthOfData], filename)
+	filesToRemove := make([]string, 0)
+
+	// Find all indexed files for this date (kubecost-date-2.csv.gz, kubecost-date-3.csv.gz, etc.)
+	for filename := range a.filesToUpload[monthOfData] {
+		if strings.Contains(filename, currentDate) && !strings.HasSuffix(filename, ".tmp") {
+			filesToRemove = append(filesToRemove, filename)
+		}
+	}
+
+	if len(filesToRemove) > 0 {
+		log.Printf("Kubecost has data for %s, removing %d old indexed files", currentDate, len(filesToRemove))
+
+		for _, filename := range filesToRemove {
+			err := os.Remove(filename)
+			if err != nil && !os.IsNotExist(err) {
+				log.Printf("Warning: failed to remove old indexed file %s: %v", filename, err)
 			}
+
+			delete(a.filesToUpload[monthOfData], filename)
 		}
 	}
 }
@@ -947,6 +877,67 @@ func (a *App) getCSVRowsFromRecord(currency string, month string, v KubecostAllo
 	}
 
 	return rows
+}
+
+func (a *App) lockState() {
+	lockPath := filepath.Join(a.FilePath, lockFileName)
+
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Failed to create lock file: %v", err)
+	}
+
+	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		lockFile.Close()
+		log.Fatalf("Another instance is already running (failed to acquire lock): %v", err)
+	}
+
+	_, err = lockFile.WriteString(fmt.Sprintf("%d\n", os.Getpid()))
+	if err != nil {
+		lockFile.Close()
+		log.Fatalf("Failed to write PID to lock file: %v", err)
+	}
+
+	log.Printf("Acquired directory lock: %s", lockPath)
+
+	a.lockFile = lockFile
+}
+
+func (a *App) unlockState() {
+	lockPath := filepath.Join(a.FilePath, lockFileName)
+	if a.lockFile != nil {
+		syscall.Flock(int(a.lockFile.Fd()), syscall.LOCK_UN)
+		a.lockFile.Close()
+		os.Remove(lockPath)
+		log.Printf("Released directory lock: %s", lockPath)
+		a.lockFile = nil
+	}
+}
+
+func (a *App) cleanupTempFiles() {
+	entries, err := os.ReadDir(a.FilePath)
+	if err != nil {
+		log.Printf("Warning: failed to read directory %s for cleanup: %v", a.FilePath, err)
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if strings.HasSuffix(name, ".tmp") && strings.Contains(name, "kubecost-") {
+			tempPath := filepath.Join(a.FilePath, name) // ← И здесь a.FilePath
+
+			if err := os.Remove(tempPath); err != nil {
+				log.Printf("Warning: failed to remove temp file %s: %v", tempPath, err)
+			} else {
+				log.Printf("Removed temp file: %s", tempPath) // ← Добавьте лог успеха
+			}
+		}
+	}
 }
 
 func checkForError(response *http.Response) error {
