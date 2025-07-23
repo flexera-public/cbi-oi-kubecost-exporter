@@ -201,7 +201,11 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file writer: %v", err)
 	}
-	defer fileWriter.close()
+	defer func() {
+		if err := fileWriter.close(); err != nil {
+			log.Printf("Warning: failed to close file writer: %v", err)
+		}
+	}()
 
 	err = fileWriter.writeHeaders(a.getCSVHeaders())
 	if err != nil {
@@ -217,9 +221,14 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 
 	log.Printf("Starting streaming processing for date %s", currentDate)
 
+	// https://github.com/kubecost/docs/blob/master/allocation.md#querying
+	baseURL := fmt.Sprintf("http://%s", a.KubecostHost)
+	reqURL, err := url.JoinPath(baseURL, a.KubecostAPIPath, "allocation")
+	if err != nil {
+		return fmt.Errorf("failed to build allocation URL: %w", err)
+	}
+
 	for requestNewPage {
-		// https://github.com/kubecost/docs/blob/master/allocation.md#querying
-		reqURL := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
 		req, err := http.NewRequest("GET", reqURL, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create request: %v", err)
@@ -247,11 +256,10 @@ func (a *App) processDateWithStreaming(d time.Time, currency string) error {
 		if err != nil {
 			return fmt.Errorf("failed to make request: %v", err)
 		}
+		defer resp.Body.Close()
 
 		var j KubecostAllocationResponse
-		err = json.NewDecoder(resp.Body).Decode(&j)
-		resp.Body.Close()
-		if err != nil {
+		if err = json.NewDecoder(resp.Body).Decode(&j); err != nil {
 			return fmt.Errorf("failed to decode response: %v", err)
 		}
 
@@ -660,7 +668,13 @@ func (a *App) updateFileList() {
 }
 
 func (a *App) getCurrency() string {
-	reqURL := fmt.Sprintf("http://%s%sgetConfigs", a.KubecostConfigHost, a.KubecostConfigAPIPath)
+	baseURL := fmt.Sprintf("http://%s", a.KubecostConfigHost)
+	reqURL, err := url.JoinPath(baseURL, a.KubecostConfigAPIPath, "getConfigs")
+	if err != nil {
+		log.Printf("Failed to build config URL, taking default value '%s'. Error: %v", a.DefaultCurrency, err)
+		return a.DefaultCurrency
+	}
+
 	resp, err := a.client.Get(reqURL)
 	log.Printf("Request: %+v\n", reqURL)
 	if err != nil {
@@ -889,13 +903,18 @@ func (a *App) lockState() {
 
 	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
-		lockFile.Close()
+		if err := lockFile.Close(); err != nil {
+			log.Printf("Warning: failed to close lockFile: %v", err)
+		}
+
 		log.Fatalf("Another instance is already running (failed to acquire lock): %v", err)
 	}
 
-	_, err = lockFile.WriteString(fmt.Sprintf("%d\n", os.Getpid()))
+	_, err = fmt.Fprintf(lockFile, "%d\n", os.Getpid())
 	if err != nil {
-		lockFile.Close()
+		if err := lockFile.Close(); err != nil {
+			log.Printf("Warning: failed to close lockFile: %v", err)
+		}
 		log.Fatalf("Failed to write PID to lock file: %v", err)
 	}
 
@@ -907,9 +926,18 @@ func (a *App) lockState() {
 func (a *App) unlockState() {
 	lockPath := filepath.Join(a.FilePath, lockFileName)
 	if a.lockFile != nil {
-		syscall.Flock(int(a.lockFile.Fd()), syscall.LOCK_UN)
-		a.lockFile.Close()
-		os.Remove(lockPath)
+		if err := syscall.Flock(int(a.lockFile.Fd()), syscall.LOCK_UN); err != nil {
+			log.Printf("Warning: failed to unlock file: %v", err)
+		}
+
+		if err := a.lockFile.Close(); err != nil {
+			log.Printf("Warning: failed to close lock file: %v", err)
+		}
+
+		if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+			log.Printf("Warning: failed to remove lock file %s: %v", lockPath, err)
+		}
+
 		log.Printf("Released directory lock: %s", lockPath)
 		a.lockFile = nil
 	}
@@ -929,12 +957,12 @@ func (a *App) cleanupTempFiles() {
 
 		name := entry.Name()
 		if strings.HasSuffix(name, ".tmp") && strings.Contains(name, "kubecost-") {
-			tempPath := filepath.Join(a.FilePath, name) // ← И здесь a.FilePath
+			tempPath := filepath.Join(a.FilePath, name)
 
 			if err := os.Remove(tempPath); err != nil {
 				log.Printf("Warning: failed to remove temp file %s: %v", tempPath, err)
 			} else {
-				log.Printf("Removed temp file: %s", tempPath) // ← Добавьте лог успеха
+				log.Printf("Removed temp file: %s", tempPath)
 			}
 		}
 	}

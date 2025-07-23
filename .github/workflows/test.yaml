@@ -1,10 +1,8 @@
 name: Run Tests
 
 on:
-  push:
-    branches: [ "*" ]  # Запускается для всех веток
   pull_request:
-    branches: [ "*" ]  # Запускается для всех PR
+    branches: [ "*" ]
 
 jobs:
   test:
@@ -17,21 +15,14 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'  # Укажите нужную версию Go
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: '1.22'
+          cache: true
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Run tests
-        run: make test
+      - name: Run checks and tests
+        run: make ci
 
       - name: Upload test results
         if: failure()

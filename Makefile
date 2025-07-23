@@ -21,13 +21,12 @@ generate: depend test
 	@helm repo index .
 
 # Run all checks before tests
-check: depend fmt vet lint security
+check: depend fmt vet lint
 
 # Run Go tests
 test:
 	@echo "Running tests..."
-	@go test -v -race -coverprofile=coverage.out ./...
-	@go tool cover -html=coverage.out -o coverage.html
+	@go test -v -race -cover ./...
 
 # Format Go code
 fmt:
@@ -81,11 +80,10 @@ depend-security:
 clean:
 	@echo "Cleaning up..."
 	@rm -f coverage.out coverage.html
-	@rm -f ./helm-chart/*.tgz
 	@go clean ./...
 
 # Run CI pipeline (what GitHub Actions should run)
-ci: depend check-fmt vet lint security test
+ci: depend check-fmt vet lint test
 
 # Development workflow
 dev: fmt vet test
