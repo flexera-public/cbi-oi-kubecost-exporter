@@ -1,6 +1,6 @@
 # cbi-oi-kubecost-exporter
 
-![Version: 1.26.0](https://img.shields.io/badge/Version-1.26.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.26](https://img.shields.io/badge/AppVersion-1.26-informational?style=flat-square)
+![Version: 1.26.1](https://img.shields.io/badge/Version-1.26.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.26](https://img.shields.io/badge/AppVersion-1.26-informational?style=flat-square)
 
 ### Kubecost exporter helm chart for Kubernetes
 
@@ -117,6 +117,7 @@ You should see 200/201s in the logs, which indicates that the exporter is workin
 | kubecost.shareIdle | bool | `false` | Indicates whether allocate idle cost proportionally across non-idle resources. |
 | kubecost.shareNamespaces | string | `"kube-system,cadvisor"` | Comma-separated list of namespaces to share costs with the remaining non-idle, unshared allocations. |
 | kubecost.shareTenancyCosts | bool | `true` | Indicates whether to share the cost of cluster overhead assets across tenants of those resources. |
+| maxFileRows | int | `1000000` | Maximum number of rows per file. When daily data exceeds this limit, it will be automatically split into multiple files. |
 | persistentVolume.enabled | bool | `true` | Enable Persistent Volume. Recommended setting is true to prevent loss of historical data. |
 | persistentVolume.size | string | `"1Gi"` | Persistent Volume size. |
 | requestTimeout | int | `5` | Indicates the timeout per each request in minutes. |
