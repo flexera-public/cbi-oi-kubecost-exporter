@@ -81,6 +81,8 @@ spec:
                 value: "{{ .Values.defaultCurrency }}"
               - name: CREATE_BILL_CONNECT_IF_NOT_EXIST
                 value: "{{ .Values.flexera.createBillConnectIfNotExist }}"
+              - name: MAX_FILE_ROWS
+                value: "{{ .Values.maxFileRows }}"
               - name: VENDOR_NAME
                 value: "{{ .Values.flexera.vendorName }}"
               - name: OVERRIDE_POD_LABELS
