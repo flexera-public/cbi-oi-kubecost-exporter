@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/csv"
 	"encoding/hex"
-	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -49,6 +53,198 @@ func Test_extractLabelsWithOverride(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFileWriter_CompleteWorkflow(t *testing.T) {
+	a := newApp()
+	a.MaxFileRows = 5
+	fw, err := newFileWriter(a, "/tmp/test_complete_workflow.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+	defer func() {
+		if err := fw.close(); err != nil {
+			log.Printf("Warning: failed to close file writer: %v", err)
+		}
+	}()
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	// Write headers
+	err = fw.writeHeaders(a.getCSVHeaders())
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
+
+	// Write rows that will trigger rotation
+	testRows := [][]string{
+		{"record1", "0.1", "USD", "pod", "cpuCost", "1.0", "cpuCoreHours", "cluster1", "container1", "ns1", "pod1", "node1", "ctrl1", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+		{"record2", "0.2", "USD", "pod", "cpuCost", "2.0", "cpuCoreHours", "cluster1", "container2", "ns1", "pod2", "node1", "ctrl2", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+		{"record3", "0.3", "USD", "pod", "cpuCost", "3.0", "cpuCoreHours", "cluster1", "container3", "ns1", "pod3", "node1", "ctrl3", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+		{"record4", "0.4", "USD", "pod", "cpuCost", "4.0", "cpuCoreHours", "cluster1", "container4", "ns1", "pod4", "node1", "ctrl4", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+		{"record5", "0.5", "USD", "pod", "cpuCost", "5.0", "cpuCoreHours", "cluster1", "container5", "ns1", "pod5", "node1", "ctrl5", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+		{"record6", "0.6", "USD", "pod", "cpuCost", "6.0", "cpuCoreHours", "cluster1", "container6", "ns1", "pod6", "node1", "ctrl6", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+		{"record7", "0.7", "USD", "pod", "cpuCost", "7.0", "cpuCoreHours", "cluster1", "container7", "ns1", "pod7", "node1", "ctrl7", "deployment", "provider1", "{}", "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"},
+	}
+
+	for _, row := range testRows {
+		err = fw.writeRow(row, monthOfData, filesToUpload)
+		if err != nil {
+			t.Errorf("writeRow() error = %v", err)
+		}
+	}
+
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
+
+	if len(filesToUpload[monthOfData]) < 2 {
+		t.Errorf("Expected at least 2 files due to rotation, got %d", len(filesToUpload[monthOfData]))
+	}
+
+	// Verify all files exist and contain valid data
+	totalRecordsRead := 0
+	for filePath := range filesToUpload[monthOfData] {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			t.Errorf("File %s should exist", filePath)
+			continue
+		}
+
+		// Read and verify file content
+		fileData, err := os.ReadFile(filePath)
+		if err != nil {
+			t.Errorf("failed to read file %s: %v", filePath, err)
+			continue
+		}
+
+		gzReader, err := gzip.NewReader(bytes.NewReader(fileData))
+		if err != nil {
+			t.Errorf("file %s should be valid gzip: %v", filePath, err)
+			continue
+		}
+
+		csvReader := csv.NewReader(gzReader)
+		records, err := csvReader.ReadAll()
+		if err := gzReader.Close(); err != nil {
+			log.Printf("Warning: failed to close gzReader: %v", err)
+		}
+
+		if err != nil {
+			t.Errorf("failed to read CSV content from %s: %v", filePath, err)
+			continue
+		}
+
+		if len(records) < 2 { // At least header + 1 data row
+			t.Errorf("file %s should have at least 2 records, got %d", filePath, len(records))
+			continue
+		}
+
+		// Verify header
+		expectedHeaders := a.getCSVHeaders()
+		if !reflect.DeepEqual(records[0], expectedHeaders) {
+			t.Errorf("header mismatch in %s: expected %v, got %v", filePath, expectedHeaders, records[0])
+		}
+
+		// Count data records (excluding header)
+		totalRecordsRead += len(records) - 1
+
+		// Clean up
+		defer os.Remove(filePath)
+	}
+
+	// Should have read all test rows
+	if totalRecordsRead != len(testRows) {
+		t.Errorf("Expected to read %d records total, got %d", len(testRows), totalRecordsRead)
+	}
+}
+
+func TestFileWriter_GzipIntegrity(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_gzip_integrity.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	err = fw.writeHeaders([]string{"col1", "col2", "col3"})
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	for i := 0; i < 100; i++ {
+		row := []string{fmt.Sprintf("val%d", i), fmt.Sprintf("val%d", i+1), fmt.Sprintf("val%d", i+2)}
+		err = fw.writeRow(row, monthOfData, filesToUpload)
+		if err != nil {
+			t.Errorf("writeRow() error = %v", err)
+		}
+	}
+
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
+
+	fileData, err := os.ReadFile(fw.filePath)
+	if err != nil {
+		t.Errorf("failed to read file: %v", err)
+		return
+	}
+
+	// Verify it's properly compressed
+	if len(fileData) == 0 {
+		t.Error("compressed file should not be empty")
+	}
+
+	// Verify we can decompress it completely
+	gzReader, err := gzip.NewReader(bytes.NewReader(fileData))
+	if err != nil {
+		t.Errorf("failed to create gzip reader: %v", err)
+		return
+	}
+
+	defer func() {
+		if err := gzReader.Close(); err != nil {
+			log.Printf("Warning: failed to close gzReader: %v", err)
+		}
+	}()
+
+	csvReader := csv.NewReader(gzReader)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		t.Errorf("failed to read all records: %v", err)
+		return
+	}
+
+	// Should have header + 100 data rows
+	if len(records) != 101 {
+		t.Errorf("expected 101 records, got %d", len(records))
+	}
+
+	// Verify MD5 checksum consistency
+	md5Hash1 := getMD5FromFileBytes(fileData)
+
+	// Read file again and check MD5
+	fileData2, err := os.ReadFile(fw.filePath)
+	if err != nil {
+		t.Errorf("failed to read file second time: %v", err)
+		return
+	}
+
+	md5Hash2 := getMD5FromFileBytes(fileData2)
+
+	if md5Hash1 != md5Hash2 {
+		t.Errorf("MD5 hashes should be identical: %s != %s", md5Hash1, md5Hash2)
+	}
+
+	defer os.Remove(fw.filePath)
 }
 
 func Test_extractLabels(t *testing.T) {
@@ -143,6 +339,8 @@ func Test_newApp(t *testing.T) {
 	os.Setenv("MAX_FILE_ROWS", "1000")
 	os.Setenv("PAGE_SIZE", "200")
 	os.Setenv("OVERRIDE_POD_LABELS", "false")
+	os.Setenv("STREAM_PROCESSING_BATCH_SIZE", "50")
+	os.Setenv("CREATE_BILL_CONNECT_IF_NOT_EXIST", "false")
 
 	defer func() {
 		os.Unsetenv("REFRESH_TOKEN")
@@ -166,6 +364,8 @@ func Test_newApp(t *testing.T) {
 		os.Unsetenv("PAGE_SIZE")
 		os.Unsetenv("KUBECOST_CONFIG_API_PATH")
 		os.Unsetenv("OVERRIDE_POD_LABELS")
+		os.Unsetenv("STREAM_PROCESSING_BATCH_SIZE")
+		os.Unsetenv("CREATE_BILL_CONNECT_IF_NOT_EXIST")
 	}()
 
 	a := newApp()
@@ -187,7 +387,7 @@ func Test_newApp(t *testing.T) {
 
 	expectedConfig := Config{
 		RefreshToken:                "test_refresh_token",
-		ServiceClientId:             "test_service_client_id",
+		ServiceClientID:             "test_service_client_id",
 		ServiceClientSecret:         "test_service_client_secret",
 		OrgID:                       "test_org_id",
 		BillConnectID:               "test_bill_connect_id",
@@ -267,133 +467,90 @@ func TestApp_dateInInvoiceRange(t *testing.T) {
 	}
 }
 
-func TestApp_getCSVRows(t *testing.T) {
+func TestApp_getCSVRowsFromRecord(t *testing.T) {
 	type args struct {
 		currency string
 		month    string
-		data     []map[string]KubecostAllocation
+		record   KubecostAllocation
 	}
 
-	dataJson := `[{
-            "nonprod-cluster/fish": {
-                "name": "nonprod-cluster/fish",
-                "properties": {
-                    "cluster": "nonprod-cluster",
-                    "node": "aks-npu01z2-15-vmss00000z",
-                    "container": "fleet-agent",
-                    "controller": "fleet-agent",
-                    "controllerKind": "deployment",
-                    "namespace": "fish",
-                    "pod": "fleet-agent-7bccbd54bc-zn8b8",
-                    "providerID": "azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-                    "labels": {
-                        "app": "fleet-agent",
-                        "crosscharge_aks": "crosscharge"
-                    },
-                    "namespaceLabels": {
-                        "field_cattle_io_projectId": "p-jj7wc"
-                    }
-                },
-                "window": {
-                    "start": "2023-10-15T00:00:00Z",
-                    "end": "2023-10-16T00:00:00Z"
-                },
-                "start": "2023-10-15T00:00:00Z",
-                "end": "2023-10-16T00:00:00Z",
-                "minutes": 1440,
-                "cpuCores": 0.00566,
-                "cpuCoreRequestAverage": 0,
-                "cpuCoreUsageAverage": 0.00664,
-                "cpuCoreHours": 0.13594,
-                "cpuCost": 0.0977,
-                "cpuCostAdjustment": 0,
-                "cpuEfficiency": 1,
-                "gpuCount": 0,
-                "gpuHours": 0,
-                "gpuCost": 0,
-                "gpuCostAdjustment": 0,
-                "networkTransferBytes": 230280247.65369,
-                "networkReceiveBytes": 3834780812.31544,
-                "networkCost": 0.00004,
-                "networkCrossZoneCost": 0,
-                "networkCrossRegionCost": 0,
-                "networkInternetCost": 0.00004,
-                "networkCostAdjustment": 0,
-                "loadBalancerCost": 0,
-                "loadBalancerCostAdjustment": 0,
-                "pvBytes": 0,
-                "pvByteHours": 0,
-                "pvCost": 0,
-                "pvs": null,
-                "pvCostAdjustment": 0,
-                "ramBytes": 168877026.13333,
-                "ramByteRequestAverage": 0,
-                "ramByteUsageAverage": 180387256.21762,
-                "ramByteHours": 4053048627.2,
-                "ramCost": 0.2033,
-                "ramCostAdjustment": -0.0321,
-                "ramEfficiency": 1,
-                "externalCost": 0,
-                "sharedCost": 0.00003,
-                "totalCost": 0.0246,
-                "totalEfficiency": 1,
-                "rawAllocationOnly": {
-                    "cpuCoreUsageMax": 0.04475121093829057,
-                    "ramByteUsageMax": 320245760
-                },
-                "lbAllocations": null
-            }
-        }
-    ]`
-
-	var data []map[string]KubecostAllocation
-	err := json.Unmarshal([]byte(dataJson), &data)
-	if err != nil {
-		t.Errorf("Error unmarshalling data: %v", err)
+	testRecord := KubecostAllocation{
+		Name: "nonprod-cluster/fish",
+		Properties: Properties{
+			Cluster:         "nonprod-cluster",
+			Node:            "aks-npu01z2-15-vmss00000z",
+			Container:       "fleet-agent",
+			Controller:      "fleet-agent",
+			ControllerKind:  "deployment",
+			Namespace:       "fish",
+			Pod:             "fleet-agent-7bccbd54bc-zn8b8",
+			ProviderID:      "azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
+			Labels:          map[string]string{"app": "fleet-agent", "crosscharge_aks": "crosscharge"},
+			NamespaceLabels: map[string]string{"field_cattle_io_projectId": "p-jj7wc"},
+		},
+		Window: Window{
+			Start: "2023-10-15T00:00:00Z",
+			End:   "2023-10-16T00:00:00Z",
+		},
+		Start:                      "2023-10-15T00:00:00Z",
+		End:                        "2023-10-16T00:00:00Z",
+		Minutes:                    1440,
+		CPUCoreHours:               0.13594,
+		CPUCost:                    0.0977,
+		CPUCostAdjustment:          0,
+		GPUHours:                   0,
+		GPUCost:                    0,
+		GPUCostAdjustment:          0,
+		NetworkTransferBytes:       230280247.65369,
+		NetworkCost:                0.00004,
+		NetworkCostAdjustment:      0,
+		LoadBalancerCost:           0,
+		LoadBalancerCostAdjustment: 0,
+		PVByteHours:                0,
+		PVCost:                     0,
+		PVCostAdjustment:           0,
+		RAMByteHours:               4053048627.2,
+		RAMCost:                    0.2033,
+		RAMCostAdjustment:          -0.0321,
+		ExternalCost:               0,
+		SharedCost:                 0.00003,
 	}
+
+	expectedLabels := "{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-controller-kind\":\"deployment\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}"
 
 	var expectedRows [][]string
-	expectedRows = make([][]string, 0)
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.09770", "USD", "pod", "cpuCost", "0.13594", "cpuCoreHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "gpuCost", "0.00000", "gpuHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.17120", "USD", "pod", "ramCost", "4053048627.20000", "ramByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "pvCost", "0.00000", "pvByteHours", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00004", "USD", "pod", "networkCost", "230280247.65369", "networkTransferBytes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00003", "USD", "pod", "sharedCost", "1440.00000", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "externalCost", "1440.00000", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 	expectedRows = append(expectedRows,
 		[]string{"nonprod-cluster/fish", "0.00000", "USD", "pod", "loadBalancerCost", "1440.00000", "minutes", "nonprod-cluster", "fleet-agent", "fish", "fleet-agent-7bccbd54bc-zn8b8", "aks-npu01z2-15-vmss00000z", "fleet-agent", "deployment",
 			"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35",
-			"{\"app\":\"fleet-agent\",\"crosscharge_aks\":\"crosscharge\",\"field_cattle_io_projectId\":\"p-jj7wc\",\"kc-cluster\":\"nonprod-cluster\",\"kc-container\":\"fleet-agent\",\"kc-controller\":\"fleet-agent\",\"kc-namespace\":\"fish\",\"kc-node\":\"aks-npu01z2-15-vmss00000z\",\"kc-pod-id\":\"fleet-agent-7bccbd54bc-zn8b8\",\"kc-provider-id\":\"azure:///subscriptions/c84ced2bee05/resourceGroups/nonprod-cluster-rg/providers/virtualMachines/35\"}",
-			"202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
+			expectedLabels, "202310", "2023-10-15T00:00:00Z", "2023-10-15T00:00:00Z", "2023-10-16T00:00:00Z"})
 
 	tests := []struct {
 		name string
@@ -401,11 +558,11 @@ func TestApp_getCSVRows(t *testing.T) {
 		want [][]string
 	}{
 		{
-			name: "success: date in range",
+			name: "success: generate CSV rows from single record",
 			args: args{
 				currency: "USD",
 				month:    "2023-10",
-				data:     data,
+				record:   testRecord,
 			},
 			want: expectedRows,
 		},
@@ -413,20 +570,12 @@ func TestApp_getCSVRows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := newApp()
-
-			totalRecords := make([]KubecostAllocation, 0)
-			for _, allocation := range tt.args.data {
-				for _, record := range allocation {
-					totalRecords = append(totalRecords, record)
-				}
-			}
-
-			got := a.getCSVRows(tt.args.currency, tt.args.month, totalRecords)
+			got := a.getCSVRowsFromRecord(tt.args.currency, tt.args.month, tt.args.record)
 			if len(got) != len(tt.want) {
-				t.Errorf("len getCSVRows() = %v, want %v", len(got), len(tt.want))
+				t.Errorf("len getCSVRowsFromRecord() = %v, want %v", len(got), len(tt.want))
 				return
 			}
-			// Find all records got in want
+
 			for _, rowGot := range got {
 				found := false
 				for _, rowWant := range tt.want {
@@ -438,9 +587,7 @@ func TestApp_getCSVRows(t *testing.T) {
 				if !found {
 					t.Errorf("row %v not found in want", rowGot)
 				}
-
 			}
-
 		})
 	}
 }
@@ -572,7 +719,6 @@ func TestApp_DaysInMonth(t *testing.T) {
 }
 
 func TestGetMD5FromFileBytes(t *testing.T) {
-	// Define a test case with an input byte slice and the expected MD5 hash
 	testCases := []struct {
 		input    []byte
 		expected string
@@ -591,4 +737,307 @@ func TestGetMD5FromFileBytes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFileWriter_NewFileWriter(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test.csv.gz")
+	if err != nil {
+		t.Errorf("newFileWriter() error = %v", err)
+	}
+
+	defer func() {
+		if err := fw.close(); err != nil {
+			log.Printf("Warning: failed to close file writer: %v", err)
+		}
+	}()
+
+	if fw.file == nil {
+		t.Error("file should be initialized")
+	}
+	if fw.bufferedFile == nil {
+		t.Error("bufferedFile should be initialized")
+	}
+	if fw.zipWriter == nil {
+		t.Error("zipWriter should be initialized")
+	}
+	if fw.csvWriter == nil {
+		t.Error("csvWriter should be initialized")
+	}
+	if fw.rowCount != 0 {
+		t.Errorf("rowCount should be 0, got %d", fw.rowCount)
+	}
+	if fw.fileIndex != 1 {
+		t.Errorf("fileIndex should be 1, got %d", fw.fileIndex)
+	}
+}
+
+func TestFileWriter_writeHeaders(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_headers.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	defer func() {
+		if err := fw.close(); err != nil {
+			log.Printf("Warning: failed to close file writer: %v", err)
+		}
+	}()
+
+	headers := []string{"col1", "col2", "col3"}
+	err = fw.writeHeaders(headers)
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
+}
+
+func TestFileWriter_writeRow(t *testing.T) {
+	a := newApp()
+	a.MaxFileRows = 2
+	fw, err := newFileWriter(a, "/tmp/test_writerow.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	defer func() {
+		if err := fw.close(); err != nil {
+			log.Printf("Warning: failed to close file writer: %v", err)
+		}
+	}()
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	row1 := []string{"value1", "value2", "value3"}
+	err = fw.writeRow(row1, monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("writeRow() error = %v", err)
+	}
+
+	if fw.rowCount != 1 {
+		t.Errorf("rowCount should be 1, got %d", fw.rowCount)
+	}
+
+	row2 := []string{"value4", "value5", "value6"}
+	err = fw.writeRow(row2, monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("writeRow() error = %v", err)
+	}
+
+	if fw.rowCount != 2 {
+		t.Errorf("rowCount should be 2, got %d", fw.rowCount)
+	}
+}
+
+func TestFileWriter_finalizeFile(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_finalize.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	err = fw.writeHeaders([]string{"col1", "col2"})
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	row := []string{"val1", "val2"}
+	err = fw.writeRow(row, monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("writeRow() error = %v", err)
+	}
+
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
+
+	if _, exists := filesToUpload[monthOfData][fw.filePath]; !exists {
+		t.Error("file should be added to filesToUpload")
+	}
+
+	// Verify file exists and has content
+	if _, err := os.Stat(fw.filePath); os.IsNotExist(err) {
+		t.Error("file should exist after finalization")
+	}
+
+	// Read and verify file content
+	fileData, err := os.ReadFile(fw.filePath)
+	if err != nil {
+		t.Errorf("failed to read file: %v", err)
+	}
+
+	if len(fileData) == 0 {
+		t.Error("file should not be empty")
+	}
+
+	// Verify it's a valid gzip file by reading it
+	gzReader, err := gzip.NewReader(bytes.NewReader(fileData))
+	if err != nil {
+		t.Errorf("file should be valid gzip: %v", err)
+	}
+	defer func() {
+		if err := gzReader.Close(); err != nil {
+			log.Printf("Warning: failed to close gzReader: %v", err)
+		}
+	}()
+
+	csvReader := csv.NewReader(gzReader)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		t.Errorf("failed to read CSV content: %v", err)
+	}
+
+	if len(records) != 2 { // header + 1 data row
+		t.Errorf("expected 2 records (header + data), got %d", len(records))
+	}
+
+	if !reflect.DeepEqual(records[0], []string{"col1", "col2"}) {
+		t.Errorf("header mismatch: expected [col1 col2], got %v", records[0])
+	}
+
+	if !reflect.DeepEqual(records[1], []string{"val1", "val2"}) {
+		t.Errorf("data row mismatch: expected [val1 val2], got %v", records[1])
+	}
+
+	defer os.Remove(fw.filePath)
+}
+
+func TestApp_isIdleRecord(t *testing.T) {
+	a := newApp()
+
+	tests := []struct {
+		name   string
+		record KubecostAllocation
+		want   bool
+	}{
+		{
+			name:   "idle record",
+			record: KubecostAllocation{Name: "cluster/_idle_"},
+			want:   true,
+		},
+		{
+			name:   "non-idle record",
+			record: KubecostAllocation{Name: "cluster/namespace/pod"},
+			want:   false,
+		},
+		{
+			name:   "idle record with complex name",
+			record: KubecostAllocation{Name: "production-cluster/_idle_/node-123"},
+			want:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := a.isIdleRecord(tt.record); got != tt.want {
+				t.Errorf("isIdleRecord() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFileWriter_rotateFile(t *testing.T) {
+	a := newApp()
+	a.MaxFileRows = 2
+	fw, err := newFileWriter(a, "/tmp/test_rotate.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	originalPath := fw.filePath
+	originalIndex := fw.fileIndex
+
+	err = fw.rotateFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("rotateFile() error = %v", err)
+	}
+
+	if fw.fileIndex != originalIndex+1 {
+		t.Errorf("fileIndex should be %d, got %d", originalIndex+1, fw.fileIndex)
+	}
+
+	expectedNewPath := "/tmp/test_rotate-2.csv.gz"
+	if fw.filePath != expectedNewPath {
+		t.Errorf("filePath should be %s, got %s", expectedNewPath, fw.filePath)
+	}
+
+	if err := fw.close(); err != nil {
+		log.Printf("Warning: failed to close file writer: %v", err)
+	}
+	defer os.Remove(originalPath)
+	defer os.Remove(fw.filePath)
+}
+
+func TestApp_cleanupOldFiles(t *testing.T) {
+	a := newApp()
+
+	monthOfData := "2023-10"
+	currentDate := "2023-10-15"
+
+	a.filesToUpload[monthOfData] = map[string]struct{}{
+		fmt.Sprintf("/tmp/kubecost-%s.csv.gz", currentDate):   {},
+		fmt.Sprintf("/tmp/kubecost-%s-2.csv.gz", currentDate): {},
+		fmt.Sprintf("/tmp/kubecost-%s-3.csv.gz", currentDate): {},
+		"/tmp/kubecost-2023-10-14.csv.gz":                     {},
+	}
+
+	a.cleanupOldFiles(monthOfData, currentDate)
+
+	expectedFiles := map[string]struct{}{
+		"/tmp/kubecost-2023-10-14.csv.gz": {},
+	}
+
+	if !reflect.DeepEqual(a.filesToUpload[monthOfData], expectedFiles) {
+		t.Errorf("cleanupOldFiles() failed, expected %v, got %v", expectedFiles, a.filesToUpload[monthOfData])
+	}
+}
+
+func Test_quickValidateGzipHeaders(t *testing.T) {
+	a := newApp()
+	fw, err := newFileWriter(a, "/tmp/test_validate.csv.gz")
+	if err != nil {
+		t.Fatalf("newFileWriter() error = %v", err)
+	}
+
+	err = fw.writeHeaders([]string{"col1", "col2"})
+	if err != nil {
+		t.Errorf("writeHeaders() error = %v", err)
+	}
+
+	monthOfData := "2023-10"
+	filesToUpload := map[string]map[string]struct{}{
+		monthOfData: make(map[string]struct{}),
+	}
+
+	row := []string{"val1", "val2"}
+	err = fw.writeRow(row, monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("writeRow() error = %v", err)
+	}
+
+	err = fw.finalizeFile(monthOfData, filesToUpload)
+	if err != nil {
+		t.Errorf("finalizeFile() error = %v", err)
+	}
+
+	err = validateGzipHeaders(fw.filePath)
+	if err != nil {
+		t.Errorf("quickValidateGzipHeaders() should pass for valid gzip file: %v", err)
+	}
+
+	defer os.Remove(fw.filePath)
 }

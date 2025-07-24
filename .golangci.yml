@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - gosec
+    - revive
+
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (*http.Response.Body).Close
+        - fileWriter.close()
+        - os.Remove
+        - os.Setenv
+        - os.Unsetenv
+
+    gosec:
+      excludes:
+        - G104
+        - G301
+        - G302
+        - G304
+        - G401
+        - G501
+
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+
+formatters:
+  enable:
+    - goimports

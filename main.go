@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
 	"crypto/md5"
-	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -18,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -115,7 +113,7 @@ type (
 
 	Config struct {
 		RefreshToken                string  `env:"REFRESH_TOKEN"`
-		ServiceClientId             string  `env:"SERVICE_APP_CLIENT_ID"`
+		ServiceClientID             string  `env:"SERVICE_APP_CLIENT_ID"`
 		ServiceClientSecret         string  `env:"SERVICE_APP_CLIENT_SECRET"`
 		OrgID                       string  `env:"ORG_ID"`
 		BillConnectID               string  `env:"BILL_CONNECT_ID"`
@@ -145,6 +143,7 @@ type (
 
 	App struct {
 		Config
+		lockFile                           *os.File
 		aggregation                        string
 		filesToUpload                      map[string]map[string]struct{}
 		client                             *http.Client
@@ -155,11 +154,16 @@ type (
 	}
 )
 
+const lockFileName = ".kubecost-exporter.lock"
+
 var uuidPattern = regexp.MustCompile(`an existing billUpload \(ID: ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`)
 var fileNameRe = regexp.MustCompile(`kubecost-(\d{4}-\d{2}-\d{2})(?:-(\d+))?\.csv(\.gz)?`)
 
 func main() {
 	exporter := newApp()
+	exporter.lockState()
+	defer exporter.unlockState()
+	exporter.cleanupTempFiles()
 	exporter.updateFileList()
 	exporter.updateFromKubecost()
 	exporter.uploadToFlexera()
@@ -181,158 +185,181 @@ func (a *App) updateFromKubecost() {
 			continue
 		}
 
-		tomorrow := d.AddDate(0, 0, 1)
-		requestNewPage := true
-		limit := a.PageSize
-		page := 0
-
-		allCostRecords := make([]KubecostAllocation, 0)
-		idleCostRecords := make(map[string]KubecostAllocation)
-
-		for requestNewPage {
-			// https://github.com/kubecost/docs/blob/master/allocation.md#querying
-			reqUrl := fmt.Sprintf("http://%s%sallocation", a.KubecostHost, a.KubecostAPIPath)
-			req, err := http.NewRequest("GET", reqUrl, nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			q := req.URL.Query()
-			q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
-			q.Add("aggregate", a.aggregation)
-			q.Add("idle", fmt.Sprintf("%t", a.Idle))
-			q.Add("includeIdle", fmt.Sprintf("%t", a.Idle))
-			q.Add("idleByNode", fmt.Sprintf("%t", a.IdleByNode))
-			q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
-			q.Add("shareNamespaces", a.ShareNamespaces)
-			q.Add("shareSplit", "weighted")
-			q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
-			q.Add("step", "1d")
-			q.Add("accumulate", "true")
-			q.Add("offset", fmt.Sprintf("%d", page*limit))
-			q.Add("limit", fmt.Sprintf("%d", limit))
-
-			req.URL.RawQuery = q.Encode()
-			log.Printf("Request: %+v?%s\n", reqUrl, q.Encode())
-
-			resp, err := a.client.Do(req)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("Response Status Code: %+v\n", resp.StatusCode)
-
-			var j KubecostAllocationResponse
-			err = json.NewDecoder(resp.Body).Decode(&j)
-			if err != nil {
-				log.Fatal(err)
-			}
-			resp.Body.Close()
-
-			if j.Code != http.StatusOK {
-				log.Println("Kubecost API response code different than 200, skipping")
-				continue
-			}
-
-			for _, allocation := range j.Data {
-				for id, record := range allocation {
-					if a.isIdleRecord(record) {
-						idleCostRecords[id] = record
-					} else {
-						allCostRecords = append(allCostRecords, record)
-					}
-				}
-				totalRecords := len(allocation)
-				if a.ShareIdle && totalRecords < a.PageSize || !a.ShareIdle && totalRecords < a.PageSize+1 {
-					requestNewPage = false
-				}
-			}
-
-			page++
-		}
-
-		for _, idleRecord := range idleCostRecords {
-			allCostRecords = append(allCostRecords, idleRecord)
-		}
-
-		monthOfData := d.Format("2006-01")
-		var csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv.gz"), d.Format("2006-01-02"))
-
-		// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
-		dataExist := false
-
-		if len(allCostRecords) > 0 {
-			dataExist = true
-		}
-
-		if dataExist == false {
-			log.Printf(
-				"Kubecost doesn't have data for date range %s to %s, skipping\n",
-				d.Format("2006-01-02T15:04:05Z"),
-				tomorrow.Format("2006-01-02T15:04:05Z"))
+		err := a.processDateWithStreaming(d, currency)
+		if err != nil {
+			log.Printf("Error processing date %s: %v", d.Format("2006-01-02"), err)
 			continue
 		}
+	}
+}
+func (a *App) processDateWithStreaming(d time.Time, currency string) error {
+	tomorrow := d.AddDate(0, 0, 1)
+	currentDate := d.Format("2006-01-02")
+	monthOfData := d.Format("2006-01")
 
-		var fileIndex int = 1
-		var rowCount int = 0
+	fileWriter, err := newFileWriter(a, fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v.csv.gz"), currentDate))
+	if err != nil {
+		return fmt.Errorf("failed to create file writer: %v", err)
+	}
+	defer func() {
+		if err := fileWriter.close(); err != nil {
+			log.Printf("Warning: failed to close file writer: %v", err)
+		}
+	}()
 
-		b := new(bytes.Buffer)
-		zipWriter := gzip.NewWriter(b)
-		writer := csv.NewWriter(zipWriter)
+	err = fileWriter.writeHeaders(a.getCSVHeaders())
+	if err != nil {
+		return fmt.Errorf("failed to write headers: %v", err)
+	}
 
-		writer.Write(a.getCSVHeaders())
+	page := 0
+	limit := a.PageSize
+	requestNewPage := true
+	totalRecordsProcessed := 0
+	totalRowsProcessed := 0
+	idleRecords := make(map[string]KubecostAllocation)
 
-		// Logs to validate date range requested and date range gotten in the data
-		log.Printf("Requested date range, from %s to %s \n", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z"))
+	log.Printf("Starting streaming processing for date %s", currentDate)
 
-		for _, row := range a.getCSVRows(currency, monthOfData, allCostRecords) {
-			if rowCount >= a.MaxFileRows {
-				a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
+	// https://github.com/kubecost/docs/blob/master/allocation.md#querying
+	baseURL := fmt.Sprintf("http://%s", a.KubecostHost)
+	reqURL, err := url.JoinPath(baseURL, a.KubecostAPIPath, "allocation")
+	if err != nil {
+		return fmt.Errorf("failed to build allocation URL: %w", err)
+	}
 
-				fileIndex++
-				csvFile = fmt.Sprintf(path.Join(a.FilePath, "kubecost-%v-%d.csv.gz"), d.Format("2006-01-02"), fileIndex)
-				b = new(bytes.Buffer)
-				zipWriter = gzip.NewWriter(b)
-				writer = csv.NewWriter(zipWriter)
+	for requestNewPage {
+		req, err := http.NewRequest("GET", reqURL, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %v", err)
+		}
 
-				writer.Write(a.getCSVHeaders())
-				rowCount = 1
+		q := req.URL.Query()
+		q.Add("window", fmt.Sprintf("%s,%s", d.Format("2006-01-02T15:04:05Z"), tomorrow.Format("2006-01-02T15:04:05Z")))
+		q.Add("aggregate", a.aggregation)
+		q.Add("idle", fmt.Sprintf("%t", a.Idle))
+		q.Add("includeIdle", fmt.Sprintf("%t", a.Idle))
+		q.Add("idleByNode", fmt.Sprintf("%t", a.IdleByNode))
+		q.Add("shareIdle", fmt.Sprintf("%t", a.ShareIdle))
+		q.Add("shareNamespaces", a.ShareNamespaces)
+		q.Add("shareSplit", "weighted")
+		q.Add("shareTenancyCosts", fmt.Sprintf("%t", a.ShareTenancyCosts))
+		q.Add("step", "1d")
+		q.Add("accumulate", "true")
+		q.Add("offset", fmt.Sprintf("%d", page*limit))
+		q.Add("limit", fmt.Sprintf("%d", limit))
+
+		req.URL.RawQuery = q.Encode()
+		log.Printf("Request: %s?%s", reqURL, q.Encode())
+
+		resp, err := a.client.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to make request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var j KubecostAllocationResponse
+		if err = json.NewDecoder(resp.Body).Decode(&j); err != nil {
+			return fmt.Errorf("failed to decode response: %v", err)
+		}
+
+		if j.Code != http.StatusOK {
+			log.Printf("Kubecost API response code %d, skipping page %d", j.Code, page)
+			break
+		}
+
+		pageRecordsProcessed := 0
+
+		for k, allocation := range j.Data {
+			if page == 0 && k == 0 && len(allocation) > 0 {
+				log.Printf("Kubecost returned data for %s, cleaning up old indexed files", currentDate)
+				a.cleanupOldFiles(monthOfData, currentDate)
 			}
 
-			writer.Write(row)
-			rowCount++
+			for id, record := range allocation {
+				if a.isIdleRecord(record) {
+					idleRecords[id] = record
+				} else {
+					rows := a.getCSVRowsFromRecord(currency, monthOfData, record)
+					for _, row := range rows {
+						err := fileWriter.writeRow(row, monthOfData, a.filesToUpload)
+						if err != nil {
+							return err
+						}
+						totalRowsProcessed++
+					}
+					pageRecordsProcessed++
+				}
+			}
+			totalRecords := len(allocation)
+			if a.ShareIdle && totalRecords < a.PageSize || !a.ShareIdle && totalRecords < a.PageSize+1 {
+				requestNewPage = false
+			}
 		}
-		a.closeAndSaveFile(writer, zipWriter, b, monthOfData, csvFile)
+
+		totalRecordsProcessed += pageRecordsProcessed
+		log.Printf("Processed page %d: %d records, total: %d", page, pageRecordsProcessed, totalRecordsProcessed)
+		page++
+	}
+
+	for _, record := range idleRecords {
+		rows := a.getCSVRowsFromRecord(currency, monthOfData, record)
+		for _, row := range rows {
+			err := fileWriter.writeRow(row, monthOfData, a.filesToUpload)
+			if err != nil {
+				return err
+			}
+			totalRowsProcessed++
+		}
+	}
+	totalRecordsProcessed += len(idleRecords)
+	log.Printf("Processed %d idle records", len(idleRecords))
+
+	// If the data obtained is empty, skip the iteration, because it might overwrite a previously obtained file for the same range time
+	if totalRecordsProcessed == 0 {
+		log.Printf("No data for date %s, removing empty file", currentDate)
+		return nil
+	}
+
+	err = fileWriter.finalizeFile(monthOfData, a.filesToUpload)
+	if err != nil {
+		return fmt.Errorf("failed to finalize file: %v", err)
+	}
+
+	if err := validateGzipHeaders(fileWriter.filePath); err != nil {
+		log.Printf("Warning: file failed validation: %v", err)
+	}
+
+	log.Printf("Completed processing for %s: %d total records, %d data rows", currentDate, totalRecordsProcessed, totalRowsProcessed)
+	return nil
+}
+
+func (a *App) cleanupOldFiles(monthOfData, currentDate string) {
+	filesToRemove := make([]string, 0)
+
+	// Find all indexed files for this date (kubecost-date-2.csv.gz, kubecost-date-3.csv.gz, etc.)
+	for filename := range a.filesToUpload[monthOfData] {
+		if strings.Contains(filename, currentDate) && !strings.HasSuffix(filename, ".tmp") {
+			filesToRemove = append(filesToRemove, filename)
+		}
+	}
+
+	if len(filesToRemove) > 0 {
+		log.Printf("Kubecost has data for %s, removing %d old indexed files", currentDate, len(filesToRemove))
+
+		for _, filename := range filesToRemove {
+			err := os.Remove(filename)
+			if err != nil && !os.IsNotExist(err) {
+				log.Printf("Warning: failed to remove old indexed file %s: %v", filename, err)
+			}
+
+			delete(a.filesToUpload[monthOfData], filename)
+		}
 	}
 }
 
 func (a *App) isIdleRecord(record KubecostAllocation) bool {
 	return strings.Contains(record.Name, "_idle_")
-}
-
-func (a *App) closeAndSaveFile(writer *csv.Writer, zipWriter *gzip.Writer, b *bytes.Buffer, monthOfData, csvGzFile string) {
-	writer.Flush()
-	zipWriter.Flush()
-	zipWriter.Close()
-
-	a.filesToUpload[monthOfData][csvGzFile] = struct{}{}
-	err := os.WriteFile(csvGzFile, b.Bytes(), 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Retrieved", csvGzFile)
-	b.Reset()
-
-	// delete previous files for this day, except for the current one, in case there are fewer files than on the disk
-	matches := fileNameRe.FindStringSubmatch(csvGzFile)
-	if len(matches) >= 3 && len(matches[2]) == 0 { // filename without index
-		currentDate := matches[1]
-		for filename := range a.filesToUpload[monthOfData] {
-			if strings.Contains(filename, currentDate) && filename != csvGzFile {
-				_ = os.Remove(filename)
-				delete(a.filesToUpload[monthOfData], filename)
-			}
-		}
-	}
 }
 
 func (a *App) uploadToFlexera() {
@@ -358,7 +385,7 @@ func (a *App) uploadToFlexera() {
 			daysToUpload := map[string]struct{}{}
 			for filename := range files {
 				matches := fileNameRe.FindStringSubmatch(filename)
-				if matches != nil && len(matches) >= 2 {
+				if len(matches) >= 2 {
 					daysToUpload[matches[1]] = struct{}{}
 				}
 			}
@@ -460,21 +487,21 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 		return
 	}
 
-	integrationId := "cbi-oi-kubecost"
+	integrationID := "cbi-oi-kubecost"
 	//Split the billConnectId using the integrationId based on the bill identifier
-	if !strings.HasPrefix(a.BillConnectID, integrationId) {
+	if !strings.HasPrefix(a.BillConnectID, integrationID) {
 		log.Fatal("billConnectId does not start with the required prefix")
 	}
-	billIdentifier := strings.TrimPrefix(a.BillConnectID, integrationId+"-")
+	billIdentifier := strings.TrimPrefix(a.BillConnectID, integrationID+"-")
 	//Vendor name is same as display name
 	params := map[string]string{"displayName": a.VendorName, "vendorName": a.VendorName}
 
 	//name field has same value as bill identifier
-	createBillConnectPayload := map[string]interface{}{"billIdentifier": billIdentifier, "integrationId": integrationId, "name": billIdentifier, "params": params}
+	createBillConnectPayload := map[string]interface{}{"billIdentifier": billIdentifier, "integrationId": integrationID, "name": billIdentifier, "params": params}
 	url := fmt.Sprintf("https://api.%s/%s/%s/%s", a.getFlexeraDomain(), "finops-onboarding/v1/orgs", a.OrgID, "bill-connects/cbi")
 
-	billConnectJson, _ := json.Marshal(createBillConnectPayload)
-	response, err := a.doPost(url, string(billConnectJson), authHeaders)
+	billConnectJSON, _ := json.Marshal(createBillConnectPayload)
+	response, err := a.doPost(url, string(billConnectJSON), authHeaders)
 	if err != nil {
 		//When the bill connect id is not provided, abort the process
 		log.Fatalf("Error while creating the bill connect : %v", err)
@@ -483,10 +510,8 @@ func (a *App) createBillConnectIfNotExist(authHeaders map[string]string) {
 	switch response.StatusCode {
 	case 201:
 		log.Printf("Bill Connect Id is created %s", a.BillConnectID)
-		break
 	case 409:
 		log.Printf("Bill Connect Id already exists %s", a.BillConnectID)
-		break
 	default:
 		log.Fatalf("Error while creating the bill connect : %v", err)
 	}
@@ -572,18 +597,18 @@ func (a *App) doPost(url, data string, headers map[string]string) (*http.Respons
 
 // generateAccessToken returns an access token from the Flexera One API using a given refreshToken or service account.
 func (a *App) generateAccessToken() (string, error) {
-	accessTokenUrl := fmt.Sprintf("https://login.%s/oidc/token", a.getFlexeraDomain())
+	accessTokenURL := fmt.Sprintf("https://login.%s/oidc/token", a.getFlexeraDomain())
 	reqBody := url.Values{}
 	if len(a.RefreshToken) > 0 {
 		reqBody.Set("grant_type", "refresh_token")
 		reqBody.Set("refresh_token", a.RefreshToken)
 	} else {
 		reqBody.Set("grant_type", "client_credentials")
-		reqBody.Set("client_id", a.ServiceClientId)
+		reqBody.Set("client_id", a.ServiceClientID)
 		reqBody.Set("client_secret", a.ServiceClientSecret)
 	}
 
-	req, err := http.NewRequest("POST", accessTokenUrl, strings.NewReader(reqBody.Encode()))
+	req, err := http.NewRequest("POST", accessTokenURL, strings.NewReader(reqBody.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("error creating access token request: %v", err)
 	}
@@ -643,9 +668,15 @@ func (a *App) updateFileList() {
 }
 
 func (a *App) getCurrency() string {
-	reqUrl := fmt.Sprintf("http://%s%sgetConfigs", a.KubecostConfigHost, a.KubecostConfigAPIPath)
-	resp, err := a.client.Get(reqUrl)
-	log.Printf("Request: %+v\n", reqUrl)
+	baseURL := fmt.Sprintf("http://%s", a.KubecostConfigHost)
+	reqURL, err := url.JoinPath(baseURL, a.KubecostConfigAPIPath, "getConfigs")
+	if err != nil {
+		log.Printf("Failed to build config URL, taking default value '%s'. Error: %v", a.DefaultCurrency, err)
+		return a.DefaultCurrency
+	}
+
+	resp, err := a.client.Get(reqURL)
+	log.Printf("Request: %+v\n", reqURL)
 	if err != nil {
 		log.Printf("Something went wrong, taking default value '%s'. \n Error: %s.\n", a.DefaultCurrency, err.Error())
 		return a.DefaultCurrency
@@ -753,7 +784,6 @@ func (a *App) validateAppConfiguration() error {
 }
 
 func newApp() *App {
-
 	lastInvoiceDate := time.Now().Local().AddDate(0, 0, -1)
 	a := App{
 		filesToUpload:   make(map[string]map[string]struct{}),
@@ -811,59 +841,131 @@ func (a *App) getCSVHeaders() []string {
 	}
 }
 
-func (a *App) getCSVRows(currency string, month string, data []KubecostAllocation) [][]string {
-	rows := make([][]string, 0)
-	mapDatesGotten := make(map[string]string)
-	for _, v := range data {
-		mapDatesGotten[v.Start] = v.End
-		labels := extractLabels(v.Properties, a.OverridePodLabels)
-		types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
-		vals := []float64{
-			v.CPUCost + v.CPUCostAdjustment,
-			v.GPUCost + v.GPUCostAdjustment,
-			v.RAMCost + v.RAMCostAdjustment,
-			v.PVCost + v.PVCostAdjustment,
-			v.NetworkCost + v.NetworkCostAdjustment,
-			v.SharedCost,
-			v.ExternalCost,
-			v.LoadBalancerCost + v.LoadBalancerCostAdjustment,
-		}
-		units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
-		amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
+func (a *App) getCSVRowsFromRecord(currency string, month string, v KubecostAllocation) [][]string {
+	rows := make([][]string, 0, 8) // Pre-allocate for 8 cost types
 
-		for i, c := range types {
-			multiplierFloat := a.Multiplier * vals[i]
-			if v.Properties.Cluster == "" {
-				v.Properties.Cluster = "Cluster"
-			}
-
-			rows = append(rows, []string{
-				v.Name,
-				strconv.FormatFloat(multiplierFloat, 'f', 5, 64),
-				currency,
-				a.Aggregation,
-				c,
-				strconv.FormatFloat(amounts[i], 'f', 5, 64),
-				units[i],
-				v.Properties.Cluster,
-				v.Properties.Container,
-				v.Properties.Namespace,
-				v.Properties.Pod,
-				v.Properties.Node,
-				v.Properties.Controller,
-				v.Properties.ControllerKind,
-				v.Properties.ProviderID,
-				labels,
-				strings.ReplaceAll(month, "-", ""),
-				v.Window.Start,
-				v.Start,
-				v.End,
-			})
-		}
-
+	labels := extractLabels(v.Properties, a.OverridePodLabels)
+	types := []string{"cpuCost", "gpuCost", "ramCost", "pvCost", "networkCost", "sharedCost", "externalCost", "loadBalancerCost"}
+	vals := []float64{
+		v.CPUCost + v.CPUCostAdjustment,
+		v.GPUCost + v.GPUCostAdjustment,
+		v.RAMCost + v.RAMCostAdjustment,
+		v.PVCost + v.PVCostAdjustment,
+		v.NetworkCost + v.NetworkCostAdjustment,
+		v.SharedCost,
+		v.ExternalCost,
+		v.LoadBalancerCost + v.LoadBalancerCostAdjustment,
 	}
-	log.Printf("Gotten dates range: %v \n", mapDatesGotten)
+	units := []string{"cpuCoreHours", "gpuHours", "ramByteHours", "pvByteHours", "networkTransferBytes", "minutes", "minutes", "minutes"}
+	amounts := []float64{v.CPUCoreHours, v.GPUHours, v.RAMByteHours, v.PVByteHours, v.NetworkTransferBytes, v.Minutes, v.Minutes, v.Minutes}
+
+	if v.Properties.Cluster == "" {
+		v.Properties.Cluster = "Cluster"
+	}
+
+	for i, c := range types {
+		multiplierFloat := a.Multiplier * vals[i]
+
+		rows = append(rows, []string{
+			v.Name,
+			strconv.FormatFloat(multiplierFloat, 'f', 5, 64),
+			currency,
+			a.Aggregation,
+			c,
+			strconv.FormatFloat(amounts[i], 'f', 5, 64),
+			units[i],
+			v.Properties.Cluster,
+			v.Properties.Container,
+			v.Properties.Namespace,
+			v.Properties.Pod,
+			v.Properties.Node,
+			v.Properties.Controller,
+			v.Properties.ControllerKind,
+			v.Properties.ProviderID,
+			labels,
+			strings.ReplaceAll(month, "-", ""),
+			v.Window.Start,
+			v.Start,
+			v.End,
+		})
+	}
+
 	return rows
+}
+
+func (a *App) lockState() {
+	lockPath := filepath.Join(a.FilePath, lockFileName)
+
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Failed to create lock file: %v", err)
+	}
+
+	err = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err != nil {
+		if err := lockFile.Close(); err != nil {
+			log.Printf("Warning: failed to close lockFile: %v", err)
+		}
+
+		log.Fatalf("Another instance is already running (failed to acquire lock): %v", err)
+	}
+
+	_, err = fmt.Fprintf(lockFile, "%d\n", os.Getpid())
+	if err != nil {
+		if err := lockFile.Close(); err != nil {
+			log.Printf("Warning: failed to close lockFile: %v", err)
+		}
+		log.Fatalf("Failed to write PID to lock file: %v", err)
+	}
+
+	log.Printf("Acquired directory lock: %s", lockPath)
+
+	a.lockFile = lockFile
+}
+
+func (a *App) unlockState() {
+	lockPath := filepath.Join(a.FilePath, lockFileName)
+	if a.lockFile != nil {
+		if err := syscall.Flock(int(a.lockFile.Fd()), syscall.LOCK_UN); err != nil {
+			log.Printf("Warning: failed to unlock file: %v", err)
+		}
+
+		if err := a.lockFile.Close(); err != nil {
+			log.Printf("Warning: failed to close lock file: %v", err)
+		}
+
+		if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+			log.Printf("Warning: failed to remove lock file %s: %v", lockPath, err)
+		}
+
+		log.Printf("Released directory lock: %s", lockPath)
+		a.lockFile = nil
+	}
+}
+
+func (a *App) cleanupTempFiles() {
+	entries, err := os.ReadDir(a.FilePath)
+	if err != nil {
+		log.Printf("Warning: failed to read directory %s for cleanup: %v", a.FilePath, err)
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if strings.HasSuffix(name, ".tmp") && strings.Contains(name, "kubecost-") {
+			tempPath := filepath.Join(a.FilePath, name)
+
+			if err := os.Remove(tempPath); err != nil {
+				log.Printf("Warning: failed to remove temp file %s: %v", tempPath, err)
+			} else {
+				log.Printf("Removed temp file: %s", tempPath)
+			}
+		}
+	}
 }
 
 func checkForError(response *http.Response) error {
