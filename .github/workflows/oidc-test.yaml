@@ -1,0 +1,16 @@
+name: oidc-deny-test
+
+on: workflow_dispatch
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::479353902725:role/gha-flexera-public-cbi-oi-kubecost-exporter-push
+          aws-region: us-east-1
